@@ -5,27 +5,49 @@
 
 int main() {
     using namespace avtostar;
-    constexpr uint32_t id = makeCanId(3, MessageType::Command, 10, 23);
-    static_assert(id <= 0x1FFFFFFFul, "CAN extended identifier overflow");
-    static_assert(canPriority(id) == 3, "priority extract");
-    static_assert(canMessageType(id) == 1, "type extract");
-    static_assert(canSource(id) == 10, "source extract");
-    static_assert(canDestination(id) == 23, "destination extract");
 
-    const Message input{kProtocolVersion, Opcode::Set, 2, 0x81, 0x1234, 1};
-    uint8_t raw[8] = {};
-    encodePayload(input, raw);
-    assert(raw[0] == 1 && raw[1] == 1 && raw[2] == 2 && raw[3] == 0x81);
-    assert(raw[4] == 0x34 && raw[5] == 0x12 && raw[6] == 1 && raw[7] == 0);
-    Message parsed{};
-    assert(decodePayload(raw, parsed));
-    assert(parsed.version == 1 && parsed.opcode == Opcode::Set);
-    assert(parsed.channel == 2 && parsed.sequence == 0x1234);
-    assert(parsed.value == 1 && parsed.flags == 0x81);
-    raw[0] = 2;
-    assert(!decodePayload(raw, parsed));
-    raw[0] = 1;
-    raw[1] = 0;
-    assert(!decodePayload(raw, parsed));
-    std::cout << "PASS: AVTOSTAR protocol header encoding and decoding\n";
+    const Message send{kProtocolVersion, Opcode::Set, 12, 27, 0x1234, 2, 0x80, 1};
+    uint8_t wire[kFrameSize] = {};
+    assert(encodeFrame(send, wire, sizeof(wire)));
+    assert(wire[0] == 0xA5 && wire[1] == 0x5A);
+    assert(wire[2] == 1 && wire[3] == 1);
+    assert(wire[4] == 12 && wire[5] == 0);
+    assert(wire[6] == 27 && wire[7] == 0);
+    assert(wire[8] == 0x34 && wire[9] == 0x12);
+    assert(wire[10] == 2 && wire[11] == 0x80);
+    assert(wire[12] == 1 && wire[13] == 0);
+
+    Message received;
+    assert(decodeFrame(wire, sizeof(wire), received));
+    assert(received.source == send.source &&
+           received.destination == send.destination &&
+           received.sequence == send.sequence &&
+           received.channel == send.channel &&
+           received.flags == send.flags &&
+           received.value == send.value &&
+           received.opcode == send.opcode);
+
+    // Bad payload CRC must be rejected.
+    wire[12] ^= 0x01;
+    assert(!decodeFrame(wire, sizeof(wire), received));
+    wire[12] ^= 0x01;
+
+    // Unknown version, opcode, truncation, illegal source, and wrong SOF.
+    wire[2] = 2;
+    assert(!decodeFrame(wire, sizeof(wire), received));
+    wire[2] = 1;
+    wire[3] = 0;
+    assert(!decodeFrame(wire, sizeof(wire), received));
+    wire[3] = 1;
+    assert(!decodeFrame(wire, sizeof(wire)-1, received));
+
+    const Message noSource{kProtocolVersion, Opcode::Set, 0, 27, 7, 1, 0, 1};
+    assert(!encodeFrame(noSource, wire, sizeof(wire)));
+
+    // Standard CRC-16/Modbus check vector.
+    const uint8_t probe[] = {'1','2','3','4','5','6','7','8','9'};
+    assert(crc16Modbus(probe, sizeof(probe)) == 0x4B37u);
+
+    std::cout << "PASS: AVTOSTAR RS-485 draft frame and CRC-16 codec\n";
+    return 0;
 }

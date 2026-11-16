@@ -2,14 +2,14 @@
 #include "protocol.hpp"
 
 #ifndef AVTOSTAR_ROLE
-#error AVTOSTAR_ROLE must be defined by the selected PlatformIO environment
+#error "AVTOSTAR_ROLE must be set by a PlatformIO environment"
 #endif
-
-#ifndef AVTOSTAR_CAN_ENABLED
-#error AVTOSTAR_CAN_ENABLED must be defined by the selected PlatformIO environment
+#ifndef AVTOSTAR_RS485_ENABLED
+#error "AVTOSTAR_RS485_ENABLED must be set by a PlatformIO environment"
 #endif
 
 namespace {
+
 const char* roleName() {
 #if AVTOSTAR_ROLE == 1
     return "Switch 2";
@@ -21,25 +21,31 @@ const char* roleName() {
     return "Unknown";
 #endif
 }
-}
+
+}  // namespace
 
 void setup() {
+    // This is a **nonfunctional** development sketch.
+    // Production WR firmware must coordinate UART0 with MAX3485 and flashing.
     Serial.begin(115200);
-    delay(500);
-    Serial.printf("AVTOSTAR Smart Home | %s | CAN assembly flag=%d\n",
-                  roleName(), AVTOSTAR_CAN_ENABLED);
-    Serial.println("Firmware scaffold: NO relay, touch, ESP-NOW, CAN or Web control initialized.");
+    delay(300);
 
-    const avtostar::Message msg{avtostar::kProtocolVersion,
-                                avtostar::Opcode::Set, 1, 0, 42, 1};
-    uint8_t payload[8] = {};
-    avtostar::encodePayload(msg, payload);
-    Serial.printf("Protocol v%u sample CAN id: 0x%08lX, data:",
-                  avtostar::kProtocolVersion,
-                  static_cast<unsigned long>(avtostar::makeCanId(
-                      3, avtostar::MessageType::Command, 1, 2)));
-    for (uint8_t b : payload) Serial.printf(" %02X", b);
-    Serial.println();
+    Serial.printf("AVTOSTAR Smart Home | %s | RS-485 assembly flag=%d\n",
+                  roleName(), AVTOSTAR_RS485_ENABLED);
+    Serial.println("SCAFFOLD ONLY: no real touch, relay, RS-485, ESP-NOW or web driver.");
+
+    const avtostar::Message sample{
+        avtostar::kProtocolVersion, avtostar::Opcode::Set,
+        1, 2, 42, 1, 0, 1
+    };
+    uint8_t bytes[avtostar::kFrameSize] = {};
+    if (avtostar::encodeFrame(sample, bytes, sizeof(bytes))) {
+        Serial.print("Draft RS-485 frame:");
+        for (uint8_t item : bytes) {
+            Serial.printf(" %02X", item);
+        }
+        Serial.println();
+    }
 }
 
 void loop() {

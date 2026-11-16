@@ -1,5 +1,9 @@
 #pragma once
 
+// Transport-neutral logical message with a draft RS-485 UART wire envelope.
+// A CRC is not a command authenticator. No real bus arbitration/driver lives here.
+
+#include <stddef.h>
 #include <stdint.h>
 
 namespace avtostar {
@@ -7,14 +11,9 @@ namespace avtostar {
 constexpr uint8_t kProtocolVersion = 1;
 constexpr uint16_t kBroadcastNode = 0;
 constexpr uint16_t kMaxNode = 1023;
-
-enum class MessageType : uint8_t {
-    Command = 1,
-    State = 2,
-    Ack = 3,
-    Heartbeat = 4,
-    Error = 5,
-};
+constexpr size_t kFrameSize = 16;
+constexpr uint8_t kFrameMarker1 = 0xA5;
+constexpr uint8_t kFrameMarker2 = 0x5A;
 
 enum class Opcode : uint8_t {
     Set = 1,
@@ -25,59 +24,93 @@ enum class Opcode : uint8_t {
 };
 
 struct Message {
-    uint8_t version;
-    Opcode opcode;
-    uint8_t channel;
-    uint8_t flags;
-    uint16_t sequence;
-    uint16_t value;
+    uint8_t version = kProtocolVersion;
+    Opcode opcode = Opcode::Heartbeat;
+    uint16_t source = 0;
+    uint16_t destination = 0;
+    uint16_t sequence = 0;
+    uint8_t channel = 0;
+    uint8_t flags = 0;
+    uint16_t value = 0;
 };
 
-// CAN extended 29-bit identifier: [priority:3][type:6][src:10][dst:10]
-constexpr uint32_t makeCanId(uint8_t priority, MessageType type,
-                             uint16_t src, uint16_t dst) {
-    return (static_cast<uint32_t>(priority & 0x07u) << 26u) |
-           (static_cast<uint32_t>(static_cast<uint8_t>(type) & 0x3fu) << 20u) |
-           (static_cast<uint32_t>(src & 0x03ffu) << 10u) |
-           static_cast<uint32_t>(dst & 0x03ffu);
+inline uint16_t crc16Modbus(const uint8_t* data, size_t length) {
+    uint16_t crc = 0xFFFFu;
+    for (size_t i = 0; i < length; ++i) {
+        crc ^= static_cast<uint16_t>(data[i]);
+        for (uint8_t bit = 0; bit < 8u; ++bit) {
+            crc = (crc & 1u) != 0u
+                ? static_cast<uint16_t>((crc >> 1u) ^ 0xA001u)
+                : static_cast<uint16_t>(crc >> 1u);
+        }
+    }
+    return crc;
 }
 
-constexpr uint8_t canPriority(uint32_t id) {
-    return static_cast<uint8_t>((id >> 26u) & 0x07u);
-}
-constexpr uint8_t canMessageType(uint32_t id) {
-    return static_cast<uint8_t>((id >> 20u) & 0x3fu);
-}
-constexpr uint16_t canSource(uint32_t id) {
-    return static_cast<uint16_t>((id >> 10u) & 0x03ffu);
-}
-constexpr uint16_t canDestination(uint32_t id) {
-    return static_cast<uint16_t>(id & 0x03ffu);
+inline void write16(uint8_t* bytes, uint16_t value) {
+    bytes[0] = static_cast<uint8_t>(value & 0xFFu);
+    bytes[1] = static_cast<uint8_t>((value >> 8u) & 0xFFu);
 }
 
-inline void encodePayload(const Message& message, uint8_t out[8]) {
-    out[0] = message.version;
-    out[1] = static_cast<uint8_t>(message.opcode);
-    out[2] = message.channel;
-    out[3] = message.flags;
-    out[4] = static_cast<uint8_t>(message.sequence & 0xffu);
-    out[5] = static_cast<uint8_t>((message.sequence >> 8u) & 0xffu);
-    out[6] = static_cast<uint8_t>(message.value & 0xffu);
-    out[7] = static_cast<uint8_t>((message.value >> 8u) & 0xffu);
+inline uint16_t read16(const uint8_t* bytes) {
+    return static_cast<uint16_t>(
+        static_cast<uint16_t>(bytes[0]) |
+        static_cast<uint16_t>(static_cast<uint16_t>(bytes[1]) << 8u));
 }
 
-inline bool decodePayload(const uint8_t data[8], Message& out) {
-    if (!data || data[0] != kProtocolVersion) return false;
-    if (data[1] < 1u || data[1] > 5u) return false;
-    out.version = data[0];
-    out.opcode = static_cast<Opcode>(data[1]);
-    out.channel = data[2];
-    out.flags = data[3];
-    out.sequence = static_cast<uint16_t>(data[4]) |
-                   static_cast<uint16_t>(static_cast<uint16_t>(data[5]) << 8u);
-    out.value = static_cast<uint16_t>(data[6]) |
-                static_cast<uint16_t>(static_cast<uint16_t>(data[7]) << 8u);
+inline bool validOpcode(uint8_t opcode) {
+    return opcode >= static_cast<uint8_t>(Opcode::Set) &&
+           opcode <= static_cast<uint8_t>(Opcode::Error);
+}
+
+inline bool encodeFrame(const Message& msg, uint8_t* output, size_t length) {
+    if (output == nullptr || length < kFrameSize ||
+        msg.version != kProtocolVersion ||
+        !validOpcode(static_cast<uint8_t>(msg.opcode)) ||
+        msg.source == 0 || msg.source > kMaxNode ||
+        msg.destination > kMaxNode) {
+        return false;
+    }
+
+    output[0] = kFrameMarker1;
+    output[1] = kFrameMarker2;
+    output[2] = msg.version;
+    output[3] = static_cast<uint8_t>(msg.opcode);
+    write16(output + 4, msg.source);
+    write16(output + 6, msg.destination);
+    write16(output + 8, msg.sequence);
+    output[10] = msg.channel;
+    output[11] = msg.flags;
+    write16(output + 12, msg.value);
+    write16(output + 14, crc16Modbus(output, 14));
     return true;
 }
 
-} // namespace avtostar
+inline bool decodeFrame(const uint8_t* input, size_t length, Message& msg) {
+    if (input == nullptr || length != kFrameSize ||
+        input[0] != kFrameMarker1 || input[1] != kFrameMarker2 ||
+        input[2] != kProtocolVersion || !validOpcode(input[3])) {
+        return false;
+    }
+    if (read16(input + 14) != crc16Modbus(input, 14)) {
+        return false;
+    }
+    const uint16_t source = read16(input + 4);
+    const uint16_t destination = read16(input + 6);
+    if (source == 0 || source > kMaxNode || destination > kMaxNode) {
+        return false;
+    }
+    Message parsed;
+    parsed.version = input[2];
+    parsed.opcode = static_cast<Opcode>(input[3]);
+    parsed.source = source;
+    parsed.destination = destination;
+    parsed.sequence = read16(input + 8);
+    parsed.channel = input[10];
+    parsed.flags = input[11];
+    parsed.value = read16(input + 12);
+    msg = parsed;
+    return true;
+}
+
+}  // namespace avtostar
