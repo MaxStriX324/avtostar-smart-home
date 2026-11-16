@@ -24,14 +24,14 @@ enum class Opcode : uint8_t {
 };
 
 struct Message {
-    uint8_t version = kProtocolVersion;
-    Opcode opcode = Opcode::Heartbeat;
-    uint16_t source = 0;
-    uint16_t destination = 0;
-    uint16_t sequence = 0;
-    uint8_t channel = 0;
-    uint8_t flags = 0;
-    uint16_t value = 0;
+    uint8_t version;
+    Opcode opcode;
+    uint16_t source;
+    uint16_t destination;
+    uint16_t sequence;
+    uint8_t channel;
+    uint8_t flags;
+    uint16_t value;
 };
 
 inline uint16_t crc16Modbus(const uint8_t* data, size_t length) {
