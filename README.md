@@ -1,73 +1,69 @@
 # AVTOSTAR Smart Home
 
-**Modular automation for stationary homes and camper vans**  
+**Local-first modular automation for stationary houses and camper vans**  
 **Powered by MaxStriX324**
 
-> **Status: concept / initial engineering scaffold, 2026-11-14.** No verified schematic, PCB, wiring instructions, tested firmware, or certified products are published yet. The firmware builds are placeholders and **do not operate physical relays**.
+> Status: engineering concept / firmware scaffold (November 2026). No KiCad schematic, tested PCB, operational firmware, or certified product is released yet.
 
-## Goal
+## Objective
 
-Local-first automation where **Switch 2** can control **Relay 2** with no router, internet connection, or central controller. Optional **Control** gateway adds a web dashboard, scenarios, CAN/RS-485 integration and device management.
+Two types of autonomous endpoints — a two-touch-button wall switch and a two-output relay module — can operate directly over Wi-Fi/ESP-NOW without an internet connection, router or central controller. A future central gateway adds browser/PWA control, scenarios, scheduling, diagnostics and wired RS-485 device management.
 
-## Product family
+## Devices
 
-| Device | MCU (provisional) | Functions | Connectivity |
+| Product | Processor | Functions | Communications |
 | --- | --- | --- | --- |
-| Switch 2 | ESP32-C3 | 2 capacitive keys (external touch ICs), indicators | Wi-Fi / ESP-NOW, optional CAN |
-| Relay 2 | ESP32-C3 | 2 independently controlled outputs | Wi-Fi / ESP-NOW, optional CAN |
-| Control | ESP32-S3 | gateway, rules, scheduling, web UI, diagnostics | Wi-Fi, CAN, RS-485 (planned) |
+| **Switch 2** | **ESP-12F / ESP8266** | Two external capacitive touch inputs, optional indicators | Wi-Fi / ESP-NOW, optional RS-485 |
+| **Relay 2** | **ESP-12F / ESP8266** | Two independently controlled outputs | Wi-Fi / ESP-NOW, optional RS-485 |
+| **Control** | ESP32-S3 (tentative) | Local web dashboard, automation, network bridging | Wi-Fi + RS-485 planned |
 
-## One PCB, two configurations
+**MAX3485 is an RS-485 transceiver, not a CAN controller or CAN transceiver. CAN and MCP2515 have been removed from the selected endpoint baseline.**
 
-There are **two assembly variants of each endpoint PCB** (Switch 2 and Relay 2):
+## One PCB per endpoint, two assembly variants
 
-- **W (Wireless):** ESP32-C3 + Wi-Fi / ESP-NOW, CAN components not populated.
-- **WC (Wireless + CAN):** the **same PCB and the same firmware codebase**, with CAN transceiver/protection/connectors populated and CAN enabled in configuration.
+- **W — Wireless:** ESP-12F + Wi-Fi / ESP-NOW; the MAX3485 and its wired interface components are not populated.
+- **WR — Wireless + RS-485:** **the same Switch 2 or Relay 2 PCB** with MAX3485, wired connector and required protection components fitted. Wireless functions remain present.
 
-The CAN-capable version **retains Wi-Fi**, it is not a CAN-only unit. The central controller is a different PCB. The wall switch and the relay also have **different power/output PCBs**; "one PCB" refers to one unified revision *per product*, not one PCB shared by a mains relay and a wall switch.
+Switch 2 and Relay 2 are **different PCB designs**, each with a common W/WR layout and population options. A mains-power relay and an automotive low-voltage relay may also need different power/output hardware, to be evaluated separately. The central Control is its own board.
 
-## Key architectural decisions
+## Core design principles
 
-1. The switch–relay binding and last valid settings must reside on endpoints; Control is optional.
-2. Direct **ESP-NOW** is the v0 wireless transport. It is peer-to-peer and **not automatically multihop mesh**. Multihop routing is a later, separately verified feature.
-3. CAN is the wired peer transport using ESP32-C3's built-in **TWAI** controller with an external transceiver.
-4. Shared transport-independent application protocol. Deduplication, acknowledgements and synchronized state must be implemented before outputs become active.
-5. Phone access via the Control gateway's local Web UI / PWA; internet/cloud is optional and is **not required for basic control**.
-6. Separate variants for 12/24 V DC and 230 V AC output safety. Never assume a single relay power layout is suitable for both.
+1. Store paired-device binding and safe configuration locally, at the endpoints; Control is optional for basic wireless use.
+2. Use direct **ESP-NOW** for the first switch-to-relay prototype. ESP-NOW alone does **not** deliver automatic multihop mesh routing.
+3. For WR, use **3.3 V MAX3485 + ESP8266 UART0** on a **half-duplex RS-485 multidrop bus**, with explicit driver-enable management.
+4. RS-485 has **no CAN-style collision arbitration**. Design a bus access/scheduling protocol before multi-node deployment; never let multiple independent masters transmit indiscriminately.
+5. Use an application-level command and state protocol common to wireless and wired transports, with acknowledgements, deduplication and safe relay boot behavior.
+6. Provide phone access initially through the gateway's authenticated local web interface, not by assuming a phone can speak ESP-NOW directly.
+7. Protect supplies and outputs for the target environment. Do not assume 12/24 V vehicle and 230 V AC building variants are electrically interchangeable.
 
-## Layout
+## Repository map
 
-| Path | Purpose |
-| --- | --- |
-| [docs/architecture.md](docs/architecture.md) | Overall topology, device responsibilities, network resilience |
-| [docs/requirements.md](docs/requirements.md) | Functional / nonfunctional requirements |
-| [docs/variants.md](docs/variants.md) | Two PCB assembly variants and preliminary product variants |
-| [docs/protocol.md](docs/protocol.md) | Draft message model and CAN mapping |
-| [docs/security.md](docs/security.md) | Commissioning, authentication, secure OTA, network separation |
-| [docs/validation-plan.md](docs/validation-plan.md) | Safety / bench / fault tests |
-| [docs/roadmap.md](docs/roadmap.md) | Phased engineering plan and milestone checklist |
-| [hardware/](hardware/) | KiCad source folders (no electrical designs released) |
-| [firmware/](firmware/) | PlatformIO firmware skeleton and protocol header |
-| [LICENSING.md](LICENSING.md) | Licensing decisions outstanding |
+- [docs/architecture.md](docs/architecture.md) — topology, failover boundaries and gateway
+- [docs/requirements.md](docs/requirements.md) — current endpoint requirements
+- [docs/variants.md](docs/variants.md) — W / WR assembly variants
+- [docs/rs485-hardware.md](docs/rs485-hardware.md) — MAX3485, UART and wiring constraints
+- [docs/protocol.md](docs/protocol.md) — draft transport-neutral message framing
+- [docs/security.md](docs/security.md) — commissioning and security
+- [docs/validation-plan.md](docs/validation-plan.md) — safety and communication test gates
+- [docs/roadmap.md](docs/roadmap.md) — phased build plan
+- [hardware/](hardware/) — hardware planning, no verified KiCad design
+- [firmware/](firmware/) — PlatformIO build scaffolds and wire-codec test
 
-## Build scaffold (not deployable)
+## Build scaffolds (not operational firmware)
 
-```bash
+```sh
 cd firmware
 pio run -e switch2_w
-pio run -e switch2_wc
+pio run -e switch2_wr
 pio run -e relay2_w
-pio run -e relay2_wc
+pio run -e relay2_wr
 pio run -e control
 ```
 
-The chosen development board names are temporary references, **not** a confirmed product pinout. These builds print boot diagnostics only and deliberately do not drive GPIO, relays or CAN. Unit test for the standalone protocol header:
+The firmware is a **nonfunctional scaffold**: neither relay drivers nor real RS-485, ESP-NOW, touch input, gateway web UI or OTA are implemented. Product pinouts remain provisional.
 
-```bash
-g++ -std=c++17 -Wall -Wextra -pedantic -Ifirmware/include firmware/test/test_protocol.cpp -o /tmp/avtostar-test
-/tmp/avtostar-test
-```
+A native C++ wire-codec test can be compiled separately; see [firmware/README.md](firmware/README.md).
 
-**Safety:** do not connect unvalidated boards to 230 V mains, safety-critical vehicle circuits, batteries without proper protections, or public internet interfaces.
+**Safety:** do not connect these prototypes to 230 V AC, safety-critical vehicle systems or unprotected high-energy supplies.
 
 **AVTOSTAR Smart Home — Powered by MaxStriX324.**

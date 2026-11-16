@@ -1,27 +1,32 @@
-# Assembly and product variants
+# Hardware assembly variants — fixed concept
 
-## Per endpoint: one PCB, two BOM/assembly variants
+There is **one PCB layout per endpoint role** and **two production assembly variants**.
 
-| Assembly | MCU | Wi-Fi / ESP-NOW | CAN peripheral | CAN connector | Same PCB revision |
-| --- | --- | --- | --- | --- | --- |
-| **W** | ESP32-C3 | Yes | Not populated | Not populated | Yes |
-| **WC** | ESP32-C3 | Yes | Populated | Populated | Yes |
+| Population | Endpoint MCU | Wireless | MAX3485 | Wired interface |
+| --- | --- | --- | --- | --- |
+| **W** | ESP-12F | Wi-Fi + ESP-NOW | DNP | Not fitted |
+| **WR** | ESP-12F | Wi-Fi + ESP-NOW | Fitted | RS-485 half-duplex |
 
-**The application protocol, identifiers, commissioning model, firmware repository and mechanical outer footprint stay common** wherever feasible. Variant selected by manufacturing options (BOM / assembly), with a reliable firmware detection/configuration policy later. Do not rely on firmware configuration alone for assembly variant identification.
+Both assembly options use the same PCB artwork and largely shared firmware. Production detection/configuration must be deliberate: a compile flag alone does **not** detect a populated MAX3485.
 
-## Distinct boards by product
+- `hardware/switch-2/`: a dedicated two-touch-key Switch 2 board.
+- `hardware/relay-2/`: a separate Relay 2 board with two output drivers.
+- `hardware/control/`: separate gateway board (ESP32-S3 tentative), RS-485 to endpoints.
 
-- `hardware/switch-2`: switch PCB, 2 external capacitive inputs, indicator LEDs, appropriate power.
-- `hardware/relay-2`: relay PCB, 2 isolated outputs and independently verified load/power design.
-- `hardware/control`: gateway PCB, ESP32-S3, CAN + RS-485 (initial provisional specification).
+W is **not** a fully wired CAN product. WR provides **Wi-Fi + RS-485**, not CAN. The former WC naming and the ESP32-C3/TWAI/MCP2515 branch are superseded.
 
-The W/WC variants are **not** two independent PCB layouts. They are population options of each endpoint PCB. The switch, relay and gateway still require different PCBs unless their mechanical/electrical designs are intentionally consolidated later.
+## Safety and power variants
 
-## Output voltage classes (separate design review)
+A **single W/WR PCB population choice** does not imply a single universal power/output design for all voltage classes. Vehicle 12/24 V DC and mains 230 V AC require independent electrical, insulation, load and regulatory reviews; there may be different relay power/output board revisions even when the logical device protocol is the same.
 
-| Candidate | Target environment | Safety note |
+## BOM population logic
+
+| Designator/function | W | WR |
 | --- | --- | --- |
-| Relay 2 LV | 12/24 V DC camper use | High current, inductive load and battery surge protection |
-| Relay 2 AC | 230 V AC house use | Mains isolation, creepage/clearance, rated protective components and certification |
+| ESP-12F / 3.3 V power / flash access | Fit | Fit |
+| Role-specific sensing or output drivers | Fit | Fit |
+| MAX3485, RS-485 connector, protection | DNP | Fit |
+| RS-485 termination and idle bias | Site/position specific | Site/position specific |
+| Wireless antenna keepout | Required | Required |
 
-Do not simply mix 230 V AC and vehicle 12/24 V in one unreviewed layout to preserve board count.
+The board must keep termination **configurable**, not always enabled at every WR node.

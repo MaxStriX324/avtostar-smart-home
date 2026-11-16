@@ -1,15 +1,14 @@
-# Initial implementation backlog
+# Engineering backlog / immediate work
 
-Priority order:
+1. **ESP-12F GPIO map** per board with reset/boot/flash constraints and two output/input pins.
+2. **MAX3485 design:** DI/RO/DE//RE, boot-safe DE pull-down, flash/programming isolation and direction timing.
+3. **RS-485 bus:** A/B reference/polarity pinout, termination, idle bias, TVS, ground/isolation and cable requirements.
+4. **Power design:** board supply, 3.3 V rail and protections for house vs camper installations.
+5. **KiCad:** Switch 2 and Relay 2 distinct layouts, W/WR BOM population options per board.
+6. ESP-NOW pairing and transport-independent application protocol.
+7. Reliable state machine: ACK/STATE, duplicate suppression, retry, fault behavior and security.
+8. RS-485 ownership/scheduler for >2 nodes; **not arbitrary concurrent multi-master UART**.
+9. ESP32-S3 gateway and local web/PWA control.
+10. OTA, production test and regulatory/safety gates.
 
-1. ESP32-C3 GPIO map by board and bootstrapping limitations.
-2. Endpoint voltage input targets, idle draw and protection.
-3. CAN transceiver/ESD/connector/termination BOM and W/WC assembly drawing.
-4. Direct ESP-NOW pairing / device binding without gateway.
-5. Relay command/state machine: retry, ACK, duplicate suppression, watchdog and reboot state.
-6. Physical two-channel touch design (external sensor ICs) and feedback LEDs.
-7. CAN/TWAI abstraction and protocol conformance tests.
-8. Gateway on ESP32-S3 and browser/PWA interface.
-9. Security review, OTA, reproducible builds and hardware validation reports.
-
-Every feature should have its implementation, test evidence and hardware revision traceability before it is marked released.
+None of these implementation items should be marked complete without measured, versioned validation evidence.

@@ -1,10 +1,10 @@
 # Security and trust boundaries — draft
 
-1. Local operation must not mean unauthenticated control: each device must use authenticated commissioning and revoke/reset procedures.
-2. ESP-NOW pairing: configure peers and encryption where supported, review multicast limitations, and implement application-level sender authorization and replay resistance.
-3. Web UI: authenticated administration, least-privilege roles, CSRF/session defense where relevant, no default passwords.
-4. Remote access: do not expose the ESP device admin HTTP port directly to the internet; prefer authenticated VPN / trusted reverse access solutions.
-5. OTA: signed firmware verification, approved version tracking, rollback on failed boot where supported, controlled update window.
-6. Physical CAN is not authenticated simply because it is wired: define physical trust assumptions and gateway validation. Avoid forwarding vehicle safety-critical CAN traffic into automation bus.
-7. Secure storage and device unique IDs: provision secrets per-device; never commit private production keys.
-8. Factory reset must clear all pairings and credentials and should not unexpectedly energize relays.
+1. All commissioning and pairing must require physical user authorization or an equivalent secure method; no unauthenticated default relay control.
+2. ESP-NOW direct peer traffic requires cryptographic sender authentication, anti-replay logic and key provisioning; do not infer that all peer/broadcast modes provide equivalent encryption.
+3. A **CRC on RS-485 detects transmission errors but does not authenticate messages**; choose physical trust assumptions and add application authorization where the installation requires it.
+4. Web UI requires authentication, session management and authorization controls. Do not expose it directly to the public Internet.
+5. Unique device IDs and pairing keys must be provisioned per device; keep production secrets out of Git.
+6. OTA must be verified, recoverable and compatible with limited ESP8266 flash/RAM and boot architecture.
+7. The automation RS-485 bus should remain separate from any safety-critical vehicle communication and power circuitry. Do not bridge untrusted traffic into vehicle systems.
+8. Secure factory reset must clear pairing and network credentials without transiently energizing relay outputs.

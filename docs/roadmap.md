@@ -1,39 +1,41 @@
-# Roadmap / implementation phases
+# Roadmap — ESP-12F / MAX3485 direction
 
-## M0 — repository and specification (this commit)
+## M0 — specifications and repo
 
-- [x] Define product names, roles and W/WC shared-PCB assembly concept.
-- [x] Create protocol message schema draft, initial test and compile skeleton.
-- [x] Draft architecture, threat model, validation and engineering checklist.
-- [ ] Choose component part numbers and power requirements.
-- [ ] Choose per-product schematic pin allocation and connector conventions.
+- [x] Establish product family (Switch 2, Relay 2, Control).
+- [x] Select ESP-12F for Switch 2 and Relay 2; MAX3485 for optional half-duplex RS-485.
+- [x] Define **W (wireless)** / **WR (wireless + RS-485)** PCB assembly options.
+- [x] Replace old CAN/TWAI scaffold with draft UART frame + host codec tests.
+- [ ] Freeze power requirements, GPIO assignments and programming isolation topology.
+- [ ] Approve low-voltage / mains product boundaries and component BOM.
 
-## M1 — two-node wireless prototype
+## M1 — direct wireless pair
 
-- [ ] Build Switch 2 W on ESP32-C3 reference hardware with two touch sensors.
-- [ ] Build Relay 2 W on a safe low-voltage reference board with dummy loads.
-- [ ] Implement pairing, credential storage, direct ESP-NOW messages and status.
-- [ ] Implement idempotent commands, per-peer deduplication, retries, watchdog.
-- [ ] Record latency, power and packet loss test data.
+- [ ] ESP-12F Switch 2 W proof of concept, two external touch sensor inputs.
+- [ ] ESP-12F Relay 2 W proof of concept with low-voltage dummy loads.
+- [ ] Implement secure commissioning and direct ESP-NOW peer messaging.
+- [ ] Implement idempotent commands, state reports, retries and deduplication.
+- [ ] Test loss of router, gateway and Internet; measure latency and RF range.
 
-## M2 — CAN/WC prototype
+## M2 — wired WR prototype
 
-- [ ] Select and verify transceiver and connector, termination and bus protection.
-- [ ] Design per-product W/WC KiCad boards and assembly BOM options.
-- [ ] Implement TWAI transport and peer-to-peer control without Control.
-- [ ] Validate bus disconnect, redundant-path failure and error recovery.
+- [ ] Draw MAX3485 UART0 circuit with boot/flash isolation and safe DE state.
+- [ ] Draw one KiCad PCB for each endpoint with W/WR BOM variants.
+- [ ] Implement UART0 + DE shift-register-safe turn-around handling.
+- [ ] Prove 2-node controlled initiator/response RS-485.
+- [ ] Select multi-node bus ownership, gateway integration and failure policy.
+- [ ] Test termination, bias, surge, ESD, wiring errors and brownout.
 
-## M3 — gateway and browser
+## M3 — central controller and web
 
-- [ ] ESP32-S3 Control board with CAN/RS-485 and provisioning.
-- [ ] Web UI / PWA: devices, channels, state, binding, logs, rules.
-- [ ] Transport bridge with loop avoidance and state synchronization.
-- [ ] Optional integration with MQTT / Home Assistant.
+- [ ] ESP32-S3 Control proof of concept with RS-485.
+- [ ] Local authenticated web UI / PWA for devices, channels, state and logs.
+- [ ] Rules, scenes, scheduler, secure network bridge and update management.
+- [ ] Optional MQTT / Home Assistant integration.
 
-## M4 — productization
+## M4 — product engineering
 
-- [ ] Manufacturing/diagnostics fixtures, installation manuals, enclosure design.
-- [ ] Signed OTA and recoverable rollback.
-- [ ] Separate LV/AC electrical and regulatory reviews, EMC and load testing.
-- [ ] Select firmware/hardware/documentation licenses and trademark policy.
-- [ ] Define serial numbers, provisioning, support and production test reports.
+- [ ] Verified electrical schematics, KiCad board/ERC/DRC, assembly and manufacturing tests.
+- [ ] Reliable recovery / update policies and security validation.
+- [ ] Appropriate EMC, electrical isolation, load and safety testing for each use case.
+- [ ] Final licensing, support strategy and commercialization requirements.

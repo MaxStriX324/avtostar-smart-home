@@ -1,49 +1,48 @@
-# Architecture — draft
+# Architecture — selected ESP-12F + RS-485 direction
 
 ```mermaid
 flowchart TB
-    Phone[Browser / local PWA] <-->|Wi-Fi IP| Control[AVTOSTAR Control
-ESP32-S3]
-    Control <-->|CAN classic| Switch[Switch 2 WC
-ESP32-C3]
-    Control <-->|CAN classic| Relay[Relay 2 WC
-ESP32-C3]
-    Switch <-.->|ESP-NOW direct peer| Relay
-    Control <-->|RS-485 optional| Other[External devices]
+  P["Phone or PC / browser"] <-->|"LAN Wi-Fi / local web"| C["AVTOSTAR Control
+ESP32-S3 (planned)"]
+  C <-->|"half-duplex RS-485 / MAX3485"| SW["Switch 2 WR
+ESP-12F"]
+  C <-->|"same RS-485 bus"| R["Relay 2 WR
+ESP-12F"]
+  SW <-.->|"direct ESP-NOW (independent of Control)"| R
 ```
 
-- Switch 2 ↔ Relay 2 remains functional **without Control** after safe commissioning and persistent binding.
-- The endpoints share a logical device address and command vocabulary across CAN and wireless transport.
-- Gateway translates transport envelopes, not raw CAN frames indiscriminately.
-- The gateway cannot assume that a command crossed a transport successfully without a response.
-- Distinct transport modules should follow interfaces: `send(packet)`, `receive(packet)`, `health()`.
-- A transport failover policy uses link health and delivery status; no uncontrolled broadcast loop.
+- Endpoints: ESP-12F (ESP8266), ESP-NOW on all versions; optional MAX3485 on WR assembly.
+- Central Control: ESP32-S3 provisional, browser/PWA and bridge via its own RS-485 transceiver.
+- The wired RS-485 segment is a **shared electrical bus**, not point-to-point connections to each endpoint.
+- Gateway loss must not break **already commissioned wireless ESP-NOW** switch-to-relay bindings.
+- Wired autonomous operation for a two-node pair can use a strict command/reply initiator/responder model; multi-node self-organizing RS-485 needs bus scheduling and recovery, **not yet implemented**.
+- Gateway must not create repeated commands or forwarding loops between Wi-Fi and RS-485.
 
-## Communication modes
+## Transport behavior
 
-1. **W → W:** ESP-NOW peer communication, no router or central controller needed.
-2. **WC → WC:** wired CAN, optionally wireless backup once arbitration is designed.
-3. **W/WC → Control:** gateway status, configuration, rules, diagnostics and web control.
-4. **Control unavailable:** bindings and local endpoint logic still operate.
+| Mode | Endpoint behavior | Current readiness |
+| --- | --- | --- |
+| W ↔ W | Direct ESP-NOW without router | Planned |
+| WR ↔ WR | RS-485 UART with mutually exclusive transmission | Planned, MAC scheduling TBD |
+| WR ↔ WR wireless | Direct ESP-NOW, even if RS-485 omitted/disconnected | Planned |
+| W/WR ↔ Control | Web control through gateway, state sync, scenes | Planned |
 
-## Wireless constraints
+Do **not** claim automatic RS-485 failover, multi-master election or multihop Wi-Fi mesh as implemented. For initial WR trials, designate exactly one RS-485 bus initiator and schedule response windows; expand to a token or single-coordinator protocol only after tests.
 
-ESP-NOW supports direct peer messaging, not automatic multi-hop routing. Planned multihop mesh must be a separate module with route discovery, TTL, loop avoidance, packet replay handling and actual RF tests. A single Wi-Fi radio also imposes channel and concurrent AP/STA constraints. Never promise transparent Wi-Fi/ESP-NOW/mesh handoff until tested.
+## Constraints
 
-## Hardware and power boundaries
+- ESP-12F exposes a limited number of usable GPIOs. GPIO0/GPIO2/GPIO15 are bootstrapping-sensitive.
+- UART0 GPIO1/TX + GPIO3/RX is the natural MAX3485 port but also used for firmware flashing and boot logs. Provide isolation/programming circuitry and explicit DE defaults.
+- MAX3485: half-duplex differential transceiver, 3.3 V supply, UART carries *serial framed bytes*; no CAN frame/ID or TWAI controller.
+- For stable RS-485, bus topology, termination, idle biasing, reference conductor, surge and ground potential differences must be assessed.
+- ESP-NOW without a router is *peer-to-peer*, not an automatically routed mesh. Wi-Fi radio channel coexistence is a test item.
 
-- Endpoint base: ESP32-C3 with proven antenna keepout and RF layout.
-- CAN on WC: ESP32-C3 internal TWAI + external CAN transceiver, EMC and ESD protection, switchable 120 Ω termination only at bus ends.
-- Switch: external dual touch channels and indicator drivers.
-- Relay: electrical isolation, fusing, load rating and snubbers based on voltage/load class.
-- Control: ESP32-S3, separate CAN transceiver, RS-485 transceiver; Ethernet optional after requirements review.
+## Software partitions
 
-## Suggested firmware modules
+- Core: device ID, persistent binding, state, watchdog, authorization.
+- Transport: ESP-NOW and UART/RS-485; connection status and retries.
+- Protocol: version, source/destination, sequence, opcode, CRC over RS-485; a separate authenticated wireless envelope.
+- Roles: 2-button Switch 2, 2-output Relay 2, optional Control gateway.
+- Web/OTA: local authenticated control and verified updates; **not implemented**.
 
-- `core`: config, identity, message dispatcher, device state, watchdog, telemetry.
-- `transports`: CAN, ESP-NOW; IP and optional MQTT at gateway.
-- `roles`: switch input handling, relay safe output controller, gateway rules.
-- `web`: gateway web UI and API, authentication and permissions.
-- `ota`: signed image verification, staged update, rollback validation.
-
-> These are architectural targets. Current repository firmware is only a compile scaffold.
+See [RS-485 hardware notes](rs485-hardware.md) and [protocol](protocol.md).
