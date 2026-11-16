@@ -5,6 +5,13 @@
 
 > Status: engineering concept / firmware scaffold (November 2026). No KiCad schematic, tested PCB, operational firmware, or certified product is released yet.
 
+## ESP-12F universal debug module (design baseline approved 2026-11-16)
+
+A separate **solder-on development/debug module** is now specified for prototyping: ESP-12F + MAX3485 + AMS1117-3.3, five general-purpose GPIO, ADC, BOOT/RESET controls and removable RO↔RX0 jumper for UART flashing. **Specification accepted; no KiCad board or validated hardware yet.** This reference module is distinct from the Switch 2 and Relay 2 production PCB/W/WR variants.
+
+- [Complete universal debug-module technical specification](hardware/esp12f-debug-module/README.md)
+- [Accepted hardware decisions and outstanding verification](docs/esp12f-debug-module-decisions.md)
+
 ## Objective
 
 Two types of autonomous endpoints — a two-touch-button wall switch and a two-output relay module — can operate directly over Wi-Fi/ESP-NOW without an internet connection, router or central controller. A future central gateway adds browser/PWA control, scenarios, scheduling, diagnostics and wired RS-485 device management.
@@ -38,6 +45,8 @@ Switch 2 and Relay 2 are **different PCB designs**, each with a common W/WR layo
 
 ## Repository map
 
+- [hardware/esp12f-debug-module/README.md](hardware/esp12f-debug-module/README.md) — accepted universal solder-on development/debug board baseline
+- [docs/esp12f-debug-module-decisions.md](docs/esp12f-debug-module-decisions.md) — locked decisions and engineering gates
 - [docs/architecture.md](docs/architecture.md) — topology, failover boundaries and gateway
 - [docs/requirements.md](docs/requirements.md) — current endpoint requirements
 - [docs/variants.md](docs/variants.md) — W / WR assembly variants

@@ -6,7 +6,9 @@
 - [x] Select ESP-12F for Switch 2 and Relay 2; MAX3485 for optional half-duplex RS-485.
 - [x] Define **W (wireless)** / **WR (wireless + RS-485)** PCB assembly options.
 - [x] Replace old CAN/TWAI scaffold with draft UART frame + host codec tests.
-- [ ] Freeze power requirements, GPIO assignments and programming isolation topology.
+- [x] Accept separate ESP-12F universal debug-module v1.0 hardware decisions (pin map, LDO, removable RO/RX0 jumper, BOOT/RESET); **specification only**.
+- [ ] Validate that debug-module schematic/PCB meets its frozen specification (UMW capacitor stability, power, GPIO16 startup, RF, UART flashing).
+- [ ] Freeze endpoint-specific power requirements, GPIO assignments and programming isolation topology.
 - [ ] Approve low-voltage / mains product boundaries and component BOM.
 
 ## M1 — direct wireless pair
@@ -16,6 +18,16 @@
 - [ ] Implement secure commissioning and direct ESP-NOW peer messaging.
 - [ ] Implement idempotent commands, state reports, retries and deduplication.
 - [ ] Test loss of router, gateway and Internet; measure latency and RF range.
+
+## M1a — universal debug-module hardware validation
+
+- [x] Freeze the [universal ESP-12F debug-module specification](../hardware/esp12f-debug-module/README.md).
+- [ ] Design and review ESP-12F + MAX3485 + AMS1117 KiCad schematic.
+- [ ] Implement 12-pad solder-on footprint and 1x5 angled UART/jumper assembly.
+- [ ] Confirm UMW output-capacitor ESR, thermal budget, stable 3.3 V during Wi-Fi peaks.
+- [ ] Validate GPIO16/DIR at power-up, reset, brownout; ensure no unintended RS-485 driver enable.
+- [ ] Prototype BOOT/RESET and UART flashing with the RX0–RO jumper removed, then RS-485 with jumper installed.
+- [ ] Prove I²C, HSPI, ADC and antenna keepout; capture measurements and BOM.
 
 ## M2 — wired WR prototype
 

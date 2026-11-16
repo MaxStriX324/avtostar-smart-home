@@ -30,3 +30,7 @@ A **single W/WR PCB population choice** does not imply a single universal power/
 | Wireless antenna keepout | Required | Required |
 
 The board must keep termination **configurable**, not always enabled at every WR node.
+
+## Separate development/debug module
+
+The accepted [ESP-12F universal debug module](../hardware/esp12f-debug-module/README.md) has ESP-12F, MAX3485 and AMS1117-3.3 fitted on a small solder-on daughterboard. It is a **separate engineering test article**, not an additional W/WR population of the Switch 2 or Relay 2 PCB. The endpoint W/WR assembly rules above remain as specified.
