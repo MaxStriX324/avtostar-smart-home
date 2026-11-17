@@ -5,12 +5,12 @@
 
 > Status: engineering concept / firmware scaffold (November 2026). No KiCad schematic, tested PCB, operational firmware, or certified product is released yet.
 
-## ESP-12F universal debug module (design baseline approved 2026-11-16)
+## Универсальный отладочный модуль ESP-12F
 
-A separate **solder-on development/debug module** is now specified for prototyping: ESP-12F + MAX3485 + AMS1117-3.3, five general-purpose GPIO, ADC, BOOT/RESET controls and removable RO↔RX0 jumper for UART flashing. **Specification accepted; no KiCad board or validated hardware yet.** This reference module is distinct from the Switch 2 and Relay 2 production PCB/W/WR variants.
+Отдельная дочерняя плата для пайки на материнскую плату: ESP-12F, MAX3485, AMS1117-3.3, пять универсальных GPIO, ADC, кнопки BOOT и RESET, перемычка RO↔RX0 для прошивки по UART0. Модуль предназначен для разработки и отладки решений AVTOSTAR и не заменяет платы Switch 2 и Relay 2.
 
-- [Complete universal debug-module technical specification](hardware/esp12f-debug-module/README.md)
-- [Accepted hardware decisions and outstanding verification](docs/esp12f-debug-module-decisions.md)
+- [Техническое описание модуля](hardware/esp12f-debug-module/README.md)
+- [Принятые аппаратные решения](docs/esp12f-debug-module-decisions.md)
 
 ## Objective
 
@@ -45,8 +45,8 @@ Switch 2 and Relay 2 are **different PCB designs**, each with a common W/WR layo
 
 ## Repository map
 
-- [hardware/esp12f-debug-module/README.md](hardware/esp12f-debug-module/README.md) — accepted universal solder-on development/debug board baseline
-- [docs/esp12f-debug-module-decisions.md](docs/esp12f-debug-module-decisions.md) — locked decisions and engineering gates
+- [hardware/esp12f-debug-module/README.md](hardware/esp12f-debug-module/README.md) — описание универсального отладочного модуля
+- [docs/esp12f-debug-module-decisions.md](docs/esp12f-debug-module-decisions.md) — принятые аппаратные решения
 - [docs/architecture.md](docs/architecture.md) — topology, failover boundaries and gateway
 - [docs/requirements.md](docs/requirements.md) — current endpoint requirements
 - [docs/variants.md](docs/variants.md) — W / WR assembly variants
