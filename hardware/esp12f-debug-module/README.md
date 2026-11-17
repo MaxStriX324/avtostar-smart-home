@@ -1,182 +1,204 @@
-# AVTOSTAR ESP-12F Universal Debug Module — hardware baseline v1.0
+# AVTOSTAR ESP-12F Universal Debug Module — универсальный отладочный модуль, версия 1.0
 
-**Status:** design decisions accepted on **2026-11-16**; schematic, PCB and performance are **not built or electrically verified**.
-**Brand:** AVTOSTAR — Powered by MaxStriX324.
-**Purpose:** small solder-on *development/debug daughterboard* for prototyping ESP-12F applications, wired RS-485 and Wi-Fi/ESP-NOW, suitable for installation on a separately designed carrier/motherboard.
+**Статус:** проектные решения утверждены **16.11.2026**; принципиальная схема и печатная плата ещё **не разработаны и не прошли электрические испытания**. Работоспособность и характеристики устройства пока не подтверждены.
+**Бренд:** AVTOSTAR — Powered by MaxStriX324.
+**Назначение:** компактная дочерняя плата для пайки поверх материнской платы. Предназначена для разработки и отладки устройств на ESP-12F с Wi-Fi/ESP-NOW и проводным интерфейсом RS-485. Используется совместно с отдельно спроектированной материнской платой.
 
-> This is a **separate reference/debug board**. It does **not** replace the dedicated Switch 2, Relay 2 or Control designs, and it does not silently change their W (wireless) / WR (wireless + RS-485) assembly options. The debug module always has the MAX3485 populated. A product-specific carrier remains responsible for inputs, outputs, isolation, protection, connectors and safety.
+> Это **самостоятельный универсальный отладочный модуль**, а не замена плат Switch 2, Relay 2 или Control. Он не меняет принятые для этих устройств варианты комплектации W (беспроводной) и WR (беспроводной + RS-485). В отладочном модуле MAX3485 устанавливается всегда. Материнская плата конкретного устройства отвечает за входы, выходы, гальваническую развязку, защиты, внешние разъёмы и безопасность.
 
-## 1. Accepted scope and exclusions
+## 1. Утверждённая конфигурация и ограничения
 
-- **Exactly three main ICs:** ESP-12F / ESP8266, MAX3485 (3.3 V RS-485 transceiver), **AMS1117-3.3 UMW in SOT-223**.
-- **Input:** regulated +5 V and common GND. Onboard 3.3 V rail.
-- **Five application digital pins only:** GPIO4, GPIO5, GPIO12, GPIO13, GPIO14; **no LEDs, permanent pulls or fixed RC filters** on these lines.
-- **One ADC/TOUT** exposed without divider. The ESP8266 input range at the module pin is **0–1.0 V**; design scaling/RC/protection on the carrier board.
-- GPIO0, GPIO2 and GPIO15 are reserved for reliable bootstrapping and **never exposed as general I/O**; GPIO0 is accessible through the local BOOT button only.
-- GPIO16 is dedicated to RS-485 direction (DE and /RE tied together). No GPIO16-to-RST deep-sleep wake wire on v1.0.
-- UART0 (GPIO1 TX0 / GPIO3 RX0) is shared between MAX3485 and ROM flashing. Disconnect **RO ↔ RX0** with a removable jumper for wired flashing.
-- Two power LEDs only: 5V and 3V3; **no GPIO/RX/TX/DE activity LEDs**, logic buffer or additional ICs.
-- On the module: BOOT and RESET tactile buttons, one angled 1x5 service header, 12 solder pads to the motherboard.
-- RS-485 termination, failsafe bias, TVS, ground reference/isolation, external-signal dividers and driver circuitry belong on the *motherboard*; design them for each installation.
+- **Ровно три основные микросхемы:** ESP-12F / ESP8266, MAX3485 (приёмопередатчик RS-485, 3,3 В), **AMS1117-3.3 производства UMW в корпусе SOT-223**.
+- **Вход питания:** стабилизированные +5 В и общая земля GND. На модуле формируется линия 3,3 В.
+- **Пять универсальных цифровых выводов:** GPIO4, GPIO5, GPIO12, GPIO13 и GPIO14. На этих линиях **нет светодиодов, постоянных подтяжек и фиксированных RC-фильтров**.
+- **Один аналоговый вход ADC/TOUT** выведен без делителя. Допустимый диапазон непосредственно на входе ESP8266 — **0–1,0 В**. Делитель, фильтрация и защита располагаются на материнской плате.
+- GPIO0, GPIO2 и GPIO15 используются только для правильной загрузки и **не выводятся как универсальные I/O**. GPIO0 подключён к местной кнопке BOOT.
+- GPIO16 выделен под управление направлением RS-485: входы DE и /RE микросхемы MAX3485 соединены. В версии 1.0 соединение GPIO16 → RST для пробуждения из Deep Sleep отсутствует.
+- UART0 (GPIO1/TX0 и GPIO3/RX0) используется совместно MAX3485 и загрузчиком ESP8266. При прошивке физически размыкаем **RO ↔ RX0** съёмной перемычкой.
+- **Только два светодиода питания:** 5V и 3V3. Светодиоды активности GPIO, RX, TX и DE, логические буферы и другие микросхемы не применяются.
+- На плате расположены кнопки BOOT и RESET, один угловой сервисный разъём 1×5 и 12 площадок для припайки к материнской плате.
+- Согласование RS-485, резисторы смещения линии, TVS-защита, организация общей земли или развязки, делители внешних сигналов и силовые драйверы находятся **на материнской плате** и рассчитываются для конкретного применения.
 
-The choices above are **frozen for the first schematic**. Capacitor/ESR selection, startup behavior and mechanical dimensions are engineering verification items, not assumed validated facts.
+Эти решения **зафиксированы для первой версии принципиальной схемы**. Подбор конденсаторов с учётом ESR, поведение при включении питания и размеры платы остаются предметами инженерной проверки.
 
-## 2. Accessible GPIO and interfaces
+## 2. Доступные GPIO и поддерживаемые интерфейсы
 
-| Module pad/signal | Normal use | Supported alternative uses |
+| Вывод модуля | Основное назначение | Дополнительные возможности |
 | --- | --- | --- |
-| GPIO4 | General 3.3 V digital I/O | Software I²C SDA, software UART, PWM, 1-Wire, interrupts |
-| GPIO5 | General 3.3 V digital I/O | Software I²C SCL, software UART, PWM, 1-Wire, interrupts |
-| GPIO12 | General 3.3 V digital I/O | HSPI MISO, PWM, 1-Wire, interrupts |
-| GPIO13 | General 3.3 V digital I/O | HSPI MOSI, PWM, 1-Wire, interrupts |
-| GPIO14 | General 3.3 V digital I/O | HSPI SCK, PWM, 1-Wire, interrupts |
-| ADC/TOUT | Analog input, **0–1 V only** | External divider and input filtering are on motherboard |
-| GPIO16 (internal) | MAX3485 DE + /RE | **Not** user-accessible; no RTC wake-to-RST |
-| GPIO1/GPIO3 (service) | UART0 TX0/RX0 | RS-485 or flashing, **not independent interfaces** |
+| GPIO4 | Универсальный цифровой I/O, 3,3 В | Программный I²C SDA, программный UART, PWM, 1-Wire, прерывания |
+| GPIO5 | Универсальный цифровой I/O, 3,3 В | Программный I²C SCL, программный UART, PWM, 1-Wire, прерывания |
+| GPIO12 | Универсальный цифровой I/O, 3,3 В | Аппаратный HSPI MISO, PWM, 1-Wire, прерывания |
+| GPIO13 | Универсальный цифровой I/O, 3,3 В | Аппаратный HSPI MOSI, PWM, 1-Wire, прерывания |
+| GPIO14 | Универсальный цифровой I/O, 3,3 В | Аппаратный HSPI SCK, PWM, 1-Wire, прерывания |
+| ADC/TOUT | Аналоговый вход, **только 0–1 В** | Внешний делитель и входной фильтр на материнской плате |
+| GPIO16 (внутренний) | Управление MAX3485: DE + /RE | Пользователю **не выводится**; пробуждение RTC → RST не предусмотрено |
+| GPIO1/GPIO3 (сервисные) | UART0 TX0/RX0 | RS-485 или прошивка; **не являются двумя независимыми интерфейсами** |
 
-Reference combinations:
+Рекомендуемые варианты применения:
 
-- **I²C + 3 I/O:** GPIO4 = SDA, GPIO5 = SCL; GPIO12/13/14 = independent lines. I²C external pull-ups (typically 4.7 kΩ to 3.3 V) belong on the motherboard; the actual value depends on bus capacitance and frequency.
-- **HSPI + up to 1 extra I/O:** GPIO14 = SCK, GPIO13 = MOSI, GPIO12 = MISO, GPIO4 = CS, GPIO5 = I/O. Second SPI chip select could use GPIO5 instead.
-- **5 generic I/O:** GPIO4/5/12/13/14, each configured in firmware.
-- **1-Wire, PWM, software UART:** possible on suitable GPIO with firmware/latency limits; time-critical software protocols can suffer with Wi-Fi enabled.
-- **RS-485:** MAX3485 UART0, half-duplex; e.g. Modbus RTU or AVTOSTAR transport, subject to firmware protocol.
-- **Wi-Fi / ESP-NOW:** available in ESP-12F firmware; ESP-NOW is direct peer messaging, **not automatic multihop mesh**.
+- **I²C + три свободных I/O:** GPIO4 = SDA, GPIO5 = SCL; GPIO12, GPIO13 и GPIO14 остаются универсальными. Подтягивающие резисторы I²C (обычно 4,7 кОм к 3,3 В) размещаются на материнской плате. Точные номиналы зависят от ёмкости и частоты шины.
+- **HSPI + один дополнительный I/O:** GPIO14 = SCK, GPIO13 = MOSI, GPIO12 = MISO, GPIO4 = CS, GPIO5 = I/O. При необходимости второй сигнал CS можно назначить GPIO5.
+- **Пять независимых I/O:** GPIO4, GPIO5, GPIO12, GPIO13, GPIO14; направление и функции задаются прошивкой.
+- **1-Wire, PWM, программный UART:** могут работать на подходящих GPIO, но программные интерфейсы с жёсткими требованиями к времени чувствительны к работе Wi-Fi.
+- **RS-485:** полудуплексный интерфейс на MAX3485 и UART0. Возможны Modbus RTU и собственный протокол AVTOSTAR после реализации соответствующей прошивки.
+- **Wi-Fi / ESP-NOW:** поддерживаются ESP-12F. ESP-NOW обеспечивает прямой обмен между устройствами, но **сам по себе не образует многоскачковую mesh-сеть**.
 
-ESP-12F digital pins are **not 5 V tolerant**. A general-purpose pad is an MCU I/O, **not a protected 5/12/24 V terminal**. Add matching input resistors, transistor drivers, voltage adaptation and ESD protection on the carrier. GPIO6–GPIO11 are reserved for onboard Flash.
+Цифровые выводы ESP-12F **не допускают прямой подачи 5 В**. Универсальная площадка GPIO — это вывод микроконтроллера, **а не защищённый вход на 5/12/24 В**. На материнской плате при необходимости устанавливаются резисторы, транзисторные ключи, преобразователи уровней и ESD-защита. GPIO6–GPIO11 заняты встроенной Flash-памятью ESP-12F.
 
-## 3. ESP-12F power-on straps, reset and boot
+## 3. Обвязка загрузки ESP-12F, RESET и BOOT
 
-| ESP net | Approved baseline connection |
+| Цепь ESP-12F | Утверждённое подключение |
 | --- | --- |
-| EN / CH_PD | 10 kΩ pull-up to 3.3 V |
-| RST | 10 kΩ pull-up to 3.3 V; momentary RESET button to GND |
-| GPIO0 | 10 kΩ pull-up to 3.3 V; momentary BOOT button to GND |
-| GPIO2 | 10 kΩ pull-up to 3.3 V; no external general-I/O connection |
-| GPIO15 | 10 kΩ pull-down to GND; no external general-I/O connection |
-| GPIO16 | Direction net DIR with 10 kΩ pull-down to GND |
-| VCC | 3.3 V with local 10 µF and 100 nF bypass near ESP-12F |
-| RST capacitor | 100 nF *DNP option*, fit only after checking reset/programming timing |
+| EN / CH_PD | Подтяжка 10 кОм к 3,3 В |
+| RST | Подтяжка 10 кОм к 3,3 В; кнопка RESET кратковременно замыкает RST на GND |
+| GPIO0 | Подтяжка 10 кОм к 3,3 В; кнопка BOOT замыкает GPIO0 на GND |
+| GPIO2 | Подтяжка 10 кОм к 3,3 В; не используется как внешний I/O |
+| GPIO15 | Подтяжка 10 кОм к GND; не используется как внешний I/O |
+| GPIO16 | Сигнал направления DIR, подтяжка 10 кОм к GND |
+| VCC | 3,3 В; рядом с ESP-12F устанавливаются 10 мкФ и 100 нФ |
+| Конденсатор RST | Место под 100 нФ, **DNP** (не устанавливать до проверки временных параметров сброса/прошивки) |
 
-**Normal boot:** GPIO0 = HIGH, GPIO2 = HIGH, GPIO15 = LOW at sampling. **ROM UART download:** keep BOOT pressed (GPIO0 LOW), pulse RESET, release BOOT. The five universal GPIOs have no hardcoded boot straps, LEDs or pull networks on this module. Connected devices may still require firmware pin planning.
+**Обычный запуск:** на момент считывания конфигурации GPIO0 = HIGH, GPIO2 = HIGH, GPIO15 = LOW.
 
-## 4. RS-485 — MAX3485
+**Вход в загрузчик UART:** удерживаем BOOT (GPIO0 = LOW), кратковременно нажимаем RESET, затем отпускаем BOOT.
 
-| MAX3485 pin | Signal | Debug-module connection |
+На пяти универсальных GPIO нет загрузочных подтяжек, светодиодов и постоянных нагрузок со стороны модуля. При подключении внешних устройств назначение этих выводов всё равно должно учитываться в прошивке.
+
+## 4. Подключение RS-485 — MAX3485
+
+| Вывод MAX3485 | Сигнал | Подключение на модуле |
 | --- | --- | --- |
-| 1 | RO | Service header J2.5; reaches ESP GPIO3/RX0 **only through J2.4–J2.5 jumper** |
-| 2 | /RE | DIR from ESP GPIO16 |
-| 3 | DE | Same DIR from ESP GPIO16 |
-| 4 | DI | ESP GPIO1/TX0 (place optional 100 Ω footprint, default 0 Ω if not populated) |
-| 5 | GND | Digital GND |
-| 6 | A | Motherboard pad A |
-| 7 | B | Motherboard pad B |
-| 8 | VCC | 3.3 V; 100 nF bypass at package |
+| 1 | RO | J2.5; соединяется с GPIO3/RX0 ESP **только через перемычку J2.4–J2.5** |
+| 2 | /RE | Линия DIR от GPIO16 |
+| 3 | DE | Та же линия DIR от GPIO16 |
+| 4 | DI | GPIO1/TX0 ESP; место под последовательный резистор 100 Ом, значение по умолчанию 0 Ом при его неустановке |
+| 5 | GND | Общая цифровая земля |
+| 6 | A | Площадка A на материнской плате |
+| 7 | B | Площадка B на материнской плате |
+| 8 | VCC | 3,3 В; блокировочный конденсатор 100 нФ непосредственно у микросхемы |
 
-| DIR level | DE | /RE | Action |
+| Уровень DIR | DE | /RE | Режим |
 | --- | --- | --- | --- |
-| LOW | 0 | 0 | Transmitter disabled, receiver enabled |
-| HIGH | 1 | 1 | Transmitter enabled, receiver disabled |
+| LOW | 0 | 0 | Передатчик выключен, приёмник включён |
+| HIGH | 1 | 1 | Передатчик включён, приёмник выключен |
 
-The **10 kΩ DIR pulldown** is a hardware fail-safe intention, **not proof** GPIO16 never glitches high during startup/brownout. Measure DIR, TX0 and A/B during power-up, RESET and ROM flashing before attaching to a live multidrop bus. Firmware must set DIR LOW early and wait until the **last stop bit is transmitted** before returning to receive.
+**Резистор 10 кОм с DIR на GND** предназначен для удержания передатчика выключенным до начала работы программы. Но это **не доказательство** отсутствия кратковременного HIGH на GPIO16 при включении питания или падении напряжения. Перед использованием на общей линии RS-485 необходимо осциллографом проверить DIR, TX0 и A/B при подаче питания, RESET и запуске ROM-загрузчика.
 
-Do not permanently terminate A/B with 120 Ω on this module. The **motherboard** selects end-of-line termination, biasing and TVS near the exposed bus connector. Validate cable impedance, ground reference and common-mode voltages; assess galvanic isolation separately for long building/vehicle runs.
+Прошивка должна как можно раньше задать DIR = LOW, а после передачи переходить к приёму **только после фактической отправки последнего стоп-бита UART**.
 
-**Important:** USB-UART TX and MAX3485 RO must never simultaneously drive RX0. Inserting the jumper while a programming adapter is connected and driving TX can cause electrical contention. Removing the jumper isolates RO, but MAX3485 *DI* stays connected to TX0; DE is held LOW during flashing.
+Постоянный резистор 120 Ом между A и B **на модуле не устанавливаем**. Оконечное согласование, резисторы смещения и TVS-защита определяются на материнской плате возле внешнего разъёма. Для реальной сети отдельно проверяются волновое сопротивление кабеля, общая земля, синфазное напряжение и необходимость гальванической развязки.
 
-## 5. Angled programming header, RO jumper and buttons
+**Важно:** выход TX USB-UART программатора и выход RO MAX3485 нельзя одновременно подключать к RX0 — оба выхода могут пытаться задавать противоположные уровни. При прошивке перемычка обязательно снимается. Соединение TX0 → DI остаётся, однако передатчик MAX3485 должен быть отключён сигналом DE = LOW.
 
-**J2: 1×5, 2.54 mm, right-angle male header.** The physical silk labels describe the **ESP side** of the connection:
+## 5. Угловой разъём программирования, перемычка и кнопки
 
-| Pin | Label | Circuit |
+**J2: угловая штыревая гребёнка 1×5, шаг 2,54 мм.** Маркировка на плате соответствует сигналам **со стороны ESP**.
+
+| Контакт | Маркировка | Назначение |
 | --- | --- | --- |
-| J2.1 | 5V | Regulated +5 V supply for standalone flashing; don't backfeed an already powered carrier |
-| J2.2 | GND | Common reference |
-| J2.3 | TX0 | ESP GPIO1 TX → USB-UART **RX** |
-| J2.4 | RX0 | ESP GPIO3 RX ← USB-UART **TX**; jumper side 1 |
-| J2.5 | RO | MAX3485 receiver output; jumper side 2 |
+| J2.1 | 5V | Стабилизированные +5 В для автономного программирования; нельзя подавать питание навстречу уже запитанной материнской плате |
+| J2.2 | GND | Общая земля |
+| J2.3 | TX0 | Передача ESP, GPIO1 → вход **RX** USB-UART |
+| J2.4 | RX0 | Приём ESP, GPIO3 ← выход **TX** USB-UART; первая сторона перемычки |
+| J2.5 | RO | Выход приёмника MAX3485; вторая сторона перемычки |
 
-**Default use:** removable jumper between J2.4–J2.5; no USB-UART transmitter attached. **Flashing:** remove J2.4–J2.5 jumper, then connect a **3.3 V logic-level** USB-UART adapter. On J2 there is **5 V for power, not 5 V UART logic**.
+**Рабочее состояние:** перемычка установлена между J2.4 и J2.5, внешнего активного USB-UART передатчика на RX0 нет.
 
-Manual programming sequence:
-1. Disconnect normal external UART adapter or verify there are no two +5 V sources. Remove J2.4–J2.5 jumper.
-2. Connect USB-UART GND→GND, adapter RX→TX0 (J2.3), adapter TX→RX0 (J2.4). Use J2.1 +5 V only when no other supply powers the module.
-3. Hold **BOOT**; briefly press and release **RESET**; release BOOT.
-4. Flash over UART0. Disconnect USB-UART, restore J2.4–J2.5 jumper, press RESET to run the firmware.
+**Для прошивки:** снять перемычку J2.4–J2.5 и подключить USB-UART адаптер с **логическими уровнями 3,3 В**. Контакт 5V предназначен **только для питания**, а не для пяти-вольтового UART.
 
-OTA does not need jumper removal, but firmware must not accidentally enable RS-485 during programming/boot logs.
+Порядок ручной прошивки:
 
-## 6. Power supply, BOM and thermal limits
+1. Убедиться, что к модулю не подключены одновременно два источника +5 В. Снять перемычку J2.4–J2.5.
+2. Подключить USB-UART: GND → GND, RX адаптера → TX0 (J2.3), TX адаптера → RX0 (J2.4). Питание +5 В через J2.1 подавать только при отсутствии другого источника.
+3. **Зажать BOOT**, кратковременно **нажать и отпустить RESET**, затем **отпустить BOOT**.
+4. Запустить прошивку по UART0. После завершения отключить USB-UART, вернуть перемычку J2.4–J2.5, нажать RESET для обычного запуска.
 
-**Accepted production-of-prototype choice:** **AMS1117-3.3, UMW, SOT-223**. Alternative considered but **not selected**: AP2112K-3.3TRG1, SOT-23-5, 600 mA.
+Для OTA-обновления по Wi-Fi снимать перемычку не нужно. Прошивка при этом не должна случайно включать передатчик RS-485, в том числе на этапе загрузочных сообщений.
 
-**Price snapshot from user's saved ChipDip HTML pages (not a live stock quote):**
-- AMS1117-3.3 UMW SOT-223, listed as 1 A: **6.79 RUB** single-unit.
-- AP2112K-3.3TRG1 Diodes, listed as 600 mA: **19.40 RUB** single-unit.
+## 6. Питание, спецификация компонентов и тепловые ограничения
 
-Baseline rail: regulated **5 V input → AMS1117-3.3 → 3.3 V** to ESP and MAX3485. Suggested input placement **10 µF + 100 nF**. At output reserve the *manufacturer-required* capacitor with **ESR compatible with the specific UMW part** (at least 10 µF as preliminary selection), and local ESP 10 µF + 100 nF, MAX3485 100 nF. Do not approve an all-ceramic-only layout without verifying this part's stability data. Match capacitors and layout to UMW datasheet before schematic signoff.
+**Принятый стабилизатор для опытной платы:** **AMS1117-3.3, UMW, SOT-223**.
 
-LDO heat at 5 V input is approximately **0.425 W at 250 mA**, **0.85 W at 500 mA**. Provide SOT-223 thermal copper and test temperature / rail dips during Wi-Fi TX peaks. External +3V3 pad is for *limited carrier loads*, within measured power/thermal budget.
+Рассматривался, но **не выбран**: AP2112K-3.3TRG1, SOT-23-5, 600 мА.
 
-Preliminary BOM (not released for purchasing):
+**Цены из ранее сохранённых страниц «Чип и Дип» (не являются проверенными текущими ценами или остатками):**
 
-| Ref group | Component / population |
+- AMS1117-3.3 UMW, SOT-223, заявленный ток 1 А — **6,79 ₽ за штуку**.
+- AP2112K-3.3TRG1 Diodes, заявленный ток 600 мА — **19,40 ₽ за штуку**.
+
+Схема питания: стабилизированные **5 В → AMS1117-3.3 → 3,3 В** для ESP-12F и MAX3485.
+
+Предварительно на входе LDO предусматриваем **10 мкФ + 100 нФ**. На выходе необходимо установить конденсатор, который соответствует требованиям **конкретного AMS1117 производства UMW к ESR** (первоначальный ориентир — не менее 10 мкФ). Дополнительно возле ESP-12F предусматриваем 10 мкФ + 100 нФ, а возле MAX3485 — 100 нФ.
+
+Нельзя утверждать разводку только с керамическими выходными конденсаторами, пока не проверена устойчивость выбранного AMS1117 по документации UMW. Перед утверждением схемы необходимо согласовать типы, ёмкости, ESR и расположение конденсаторов с паспортом микросхемы.
+
+При входных 5 В расчётные тепловые потери LDO составляют около **0,425 Вт при токе 250 мА** и **0,85 Вт при токе 500 мА**. Для SOT-223 требуется теплоотводящий полигон меди. Температуру стабилизатора и просадки 3,3 В необходимо измерить во время пиков передачи Wi-Fi.
+
+Выход +3V3 на материнскую плату рассчитан **только на ограниченную дополнительную нагрузку** с учётом измеренного тока и теплового запаса стабилизатора.
+
+Предварительная спецификация (BOM, **не окончательная ведомость для закупки**):
+
+| Группа | Компонент и исполнение |
 | --- | --- |
-| U1 | ESP-12F / ESP8266 module |
-| U2 | MAX3485 transceiver, SOIC-8 |
-| U3 | AMS1117-3.3 UMW, SOT-223 |
-| R_STRAP | 10 kΩ × 6: EN, RST, GPIO0, GPIO2, GPIO15, DIR(GPIO16) |
-| R_DI | TX0→DI optional 100 Ω footprint; choose fit value at schematic stage |
-| R_IO | Five 0 Ω series link footprints on GPIO4/5/12/13/14 (optional diagnostic breaks) |
-| C_PWR | UMW-approved CIN/COUT; local ESP 10 µF + 100 nF, MAX3485 100 nF |
-| C_RST | 100 nF on RST, DNP pending reset validation |
-| LED1/2 | 5V and 3V3 power indicators, each with its own ~4.7 kΩ resistor |
-| SW1/2 | Momentary RESET-to-GND and BOOT(GPIO0)-to-GND switches |
-| J2 | 1×5 right-angle 2.54 mm service header + removable shunt J2.4–J2.5 |
-| TP | 3.3 V, GND and DIR test pads |
-| J1 | 12 castellated or solderable module-to-motherboard pads (geometry TBD) |
+| U1 | Модуль ESP-12F / ESP8266 |
+| U2 | Приёмопередатчик MAX3485, SOIC-8 |
+| U3 | Стабилизатор AMS1117-3.3 UMW, SOT-223 |
+| R_STRAP | 10 кОм × 6: EN, RST, GPIO0, GPIO2, GPIO15, DIR (GPIO16) |
+| R_DI | Посадочное место резистора TX0 → DI, опционально 100 Ом; окончательный номинал выбрать при разработке схемы |
+| R_IO | Пять мест под перемычки 0 Ом последовательно с GPIO4/5/12/13/14 для диагностики |
+| C_PWR | CIN/COUT по требованиям UMW; возле ESP 10 мкФ + 100 нФ, возле MAX3485 100 нФ |
+| C_RST | 100 нФ на RST, **DNP** до проверки сброса |
+| LED1/2 | Светодиоды питания 5V и 3V3; каждый через собственный резистор около 4,7 кОм |
+| SW1/2 | Кнопки RESET → GND и BOOT (GPIO0) → GND, нормально разомкнутые |
+| J2 | Угловой разъём 1×5, 2,54 мм, со съёмной перемычкой J2.4–J2.5 |
+| TP | Контрольные точки 3,3 В, GND и DIR |
+| J1 | 12 контактных площадок для пайки модуля на материнскую плату; геометрия уточняется |
 
-No I/O status LEDs, no activity buffers, no extra logic devices, no ADC divider and no fixed I²C pull-ups on the daughterboard.
+На модуле нет светодиодов состояния I/O, дополнительных логических буферов, делителя ADC и постоянных подтяжек I²C.
 
-## 7. Motherboard solder-pad map — 12 contacts
+## 7. Распиновка подключения к материнской плате — 12 площадок
 
-| Pad | Signal | Pad | Signal |
+| Контакт | Сигнал | Контакт | Сигнал |
 | --- | --- | --- | --- |
 | 1 | +5V IN | 7 | GPIO5 / I²C SCL |
 | 2 | GND | 8 | GPIO12 / HSPI MISO |
 | 3 | +3V3 OUT | 9 | GPIO13 / HSPI MOSI |
 | 4 | RS485 A | 10 | GPIO14 / HSPI SCK |
-| 5 | RS485 B | 11 | ADC / TOUT (0–1 V) |
+| 5 | RS485 B | 11 | ADC / TOUT (0–1 В) |
 | 6 | GPIO4 / I²C SDA | 12 | GND |
 
-Mechanics: **two groups of six solder pads** on the module; exact order above is the net-number contract, while left/right placement, pitch, courtyard and overall size are to be finalized in KiCad. Place ESP-12F antenna at the module edge and keep copper, tracks and metal away from its RF keepout **on both daughterboard and motherboard**. Suggested 40×30 mm board envelope is only a placement starting point, not a manufacturing drawing.
+Предварительная механика: **две группы по шесть контактных площадок**. Номера и соответствующие им сигналы в таблице являются согласованной логической распиновкой. Фактическое размещение слева/справа, шаг, габариты и зона установки определяются при проектировании посадочного места в KiCad.
 
-## 8. GPIO16 compromise and firmware interoperability
+Антенна ESP-12F должна располагаться у края модуля. В пределах её **RF keepout** нельзя размещать медь, дорожки или металл **ни на дочерней, ни на материнской плате**. Предварительный габарит 40 × 30 мм — только ориентир для компоновки, а не утверждённый производственный чертёж.
 
-GPIO16 is from the RTC GPIO domain; it is **not a boot-strap pin**, so choosing it for DIR preserves all five generic GPIOs. This is acceptable for the intended **continuously powered 5 V** development module.
+## 8. Ограничения GPIO16 и совместимость с прошивками
 
-**Lost capability:** automatic RTC timed wake from Deep Sleep normally needs GPIO16→RST. v1.0 expressly does not connect those nets and is **not the planned hardware for battery-powered periodic wake**. Deep Sleep entry without automatic wake may still be possible; the application must not assume an RTC wake path.
+GPIO16 относится к домену RTC и **не определяет режим загрузки ESP8266**. Использование его для DIR позволяет сохранить все пять основных GPIO свободными. Для предполагаемого отладочного модуля с **постоянным питанием 5 В** этот вариант принят.
 
-UART0 is reserved for RS-485 and ROM flashing. Unmodified firmware that uses Serial/UART0 for general logs or data may conflict with this topology. Boot ROM can emit UART0 traffic; correct DE=LOW must prevent bus transmission. Other firmware GPIO defaults can still cause conflicts with attached carrier circuits: reliable MCU boot is not the same as arbitrary firmware compatibility.
+**Чего лишаемся:** автоматическое пробуждение по таймеру RTC из Deep Sleep обычно требует соединения GPIO16 → RST. В версии 1.0 такого соединения нет, поэтому модуль **не предназначен для батарейных устройств с периодическим пробуждением по RTC**. Переход в Deep Sleep без автоматического выхода возможен, но рассчитывать на самопробуждение нельзя.
 
-## 9. Validation required before release
+UART0 занят RS-485 и программированием через ROM-загрузчик. Сторонние прошивки, которые используют Serial/UART0 для логирования или обмена, могут конфликтовать с такой схемой. ROM-загрузчик может выдавать сообщения на UART0; аппаратное удержание DE = LOW должно исключать их передачу в RS-485.
 
-- [ ] Check exact ESP-12F pin 1 / flash size / symbol footprint and program/boot behavior.
-- [ ] Check exact **UMW** AMS1117-3.3 pinout, CIN/COUT, output capacitor ESR/stability and thermal limits from the vendor datasheet.
-- [ ] Verify 5 V current capability, 3.3 V brownout and decoupling under Wi-Fi transmission peaks.
-- [ ] Measure GPIO0/2/15 straps and reset timing with carrier I/O connected.
-- [ ] Measure GPIO16/DIR during cold start, brownout, RESET and BOOT-to-ROM transitions; confirm A/B driver always off until firmware controls it.
-- [ ] Flash through J2 with RO jumper removed; restore jumper and confirm RS-485 reception.
-- [ ] Validate RS-485 direction switching after full stop bit, CRC and 115200-baud initial tests under expected cable conditions.
-- [ ] Verify I²C on 4/5 and HSPI on 12/13/14 without hardwired conflicts.
-- [ ] Validate ADC input scaling is performed externally and never exceeds 1.0 V at TOUT.
-- [ ] Check RF keepout on motherboard, KiCad ERC/DRC, solderability, thermal measurements and EMC/ESD system-level requirements.
+Начальная конфигурация других GPIO также зависит от прошивки и подключённой материнской платы. **Надёжная загрузка ESP не означает автоматическую совместимость с абсолютно любой прошивкой**.
 
-**Engineering status: accepted specification, not a completed / tested board.** Next deliverables: KiCad schematic → review/ERC → footprint and board layout → prototypes → measurements → revised BOM.
+## 9. Проверки перед выпуском опытной платы
 
-## 10. External primary references
+- [ ] Проверить физическую распиновку ESP-12F, объём Flash, символ, посадочное место и режимы загрузки/прошивки.
+- [ ] По документации **UMW** проверить распиновку AMS1117-3.3, входной и выходной конденсаторы, допустимый ESR, устойчивость и тепловые ограничения.
+- [ ] Проверить запас питания 5 В, просадки 3,3 В и эффективность развязки при пиковых токах Wi-Fi.
+- [ ] Измерить уровни GPIO0/2/15 и длительности сигналов RESET при подключённой материнской плате.
+- [ ] Осциллографом проверить GPIO16/DIR при холодном запуске, снижении напряжения, RESET и переходе в ROM-загрузчик. Подтвердить, что передатчик A/B не включается до разрешения прошивкой.
+- [ ] Проверить прошивку через J2 со снятой перемычкой RO; после установки перемычки проверить приём RS-485.
+- [ ] Проверить переключение направления после последнего стоп-бита, CRC и начальный обмен на 115200 бод при выбранной длине и типе кабеля.
+- [ ] Проверить I²C на GPIO4/5 и HSPI на GPIO12/13/14 без аппаратных конфликтов.
+- [ ] Убедиться, что делитель ADC находится на материнской плате и на TOUT никогда не поступает более 1,0 В.
+- [ ] Проверить RF keepout на материнской плате, ERC/DRC в KiCad, технологичность пайки, нагрев и необходимые системные испытания EMC/ESD.
 
-- [ESP8266EX hardware design guidelines](https://documentation.espressif.com/esp8266_hardware_design_guidelines_en.html)
-- [ESP8266EX datasheet](https://documentation.espressif.com/0a-esp8266ex_datasheet_en.html)
-- [MAX3485 data](https://www.analog.com/en/products/max3485.html)
-- Existing [RS-485 project notes](../../docs/rs485-hardware.md) and [validation plan](../../docs/validation-plan.md).
+**Инженерный статус:** техническая конфигурация утверждена; готовой и проверенной платы ещё нет. Следующие результаты: схема KiCad → ревизия/ERC → посадочное место и PCB → опытные образцы → измерения → уточнённая BOM.
+
+## 10. Основные технические источники
+
+- [Рекомендации Espressif по проектированию устройств ESP8266EX](https://documentation.espressif.com/esp8266_hardware_design_guidelines_en.html)
+- [Техническое описание ESP8266EX](https://documentation.espressif.com/0a-esp8266ex_datasheet_en.html)
+- [Техническая информация MAX3485](https://www.analog.com/en/products/max3485.html)
+- Внутренние документы проекта: [аппаратная часть RS-485](../../docs/rs485-hardware.md) и [план проверки](../../docs/validation-plan.md).

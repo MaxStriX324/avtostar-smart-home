@@ -1,23 +1,25 @@
-# ESP-12F universal debug module — accepted design record
+# Универсальный отладочный модуль ESP-12F — журнал принятых решений
 
-**Decision date:** 2026-11-16  
-**Design revision:** 1.0 (documentation baseline)  
-**Implementation state:** no verified schematic, PCB, or prototype yet.
+**Дата утверждения:** 16.11.2026  
+**Ревизия проекта:** 1.0 (зафиксирована конфигурация для разработки)  
+**Состояние реализации:** проверенной схемы, печатной платы и опытного образца пока нет.
 
-**Approved scope:** a standalone solder-on debugging/development module, independent from the Switch 2 / Relay 2 product PCBs and their W/WR assembly variants.
+**Утверждённое назначение:** самостоятельный универсальный отладочный модуль для пайки на материнскую плату. Не является заменой специализированных плат Switch 2 / Relay 2 и не изменяет варианты их комплектации W/WR.
 
-**Locked for v1 schematic:**
+**Зафиксировано для разработки первой принципиальной схемы:**
 
-1. Three main ICs: ESP-12F + MAX3485 + AMS1117-3.3 UMW SOT-223; regulated 5 V input.
-2. Five general digital lines: GPIO4/5/12/13/14; GPIO0/2/15 kept only for correct boot.
-3. GPIO16 solely for MAX3485 DE and /RE, external 10 kΩ to GND. No Deep Sleep GPIO16→RST wake.
-4. UART0 TX0/RX0 shared with RS-485; MAX3485 RO connected to RX0 through a removable jumper.
-5. Right-angle **1x5** programming connector, pins **5V, GND, TX0, RX0, RO**, with jumper on adjacent pins **4–5**.
-6. Onboard **BOOT** (GPIO0→GND) and **RESET** (RST→GND) momentary switches.
-7. Two LEDs: +5 V and +3.3 V only. No activity or GPIO LEDs, no logic buffer IC.
-8. 12 solder-on motherboard pads; 5 GPIOs plus ADC 0–1 V, 5V/GND/+3V3, RS485 A/B and second GND.
-9. Motherboard is responsible for input protection, ADC divider, I²C pulls, bus termination/bias and TVS.
+1. **Три основные микросхемы:** ESP-12F + MAX3485 + AMS1117-3.3 UMW (SOT-223). Вход питания — стабилизированные 5 В.
+2. **Пять универсальных цифровых выводов:** GPIO4/5/12/13/14. GPIO0/2/15 используются только для корректной загрузки.
+3. **GPIO16 — только для DE и /RE MAX3485**, с внешней подтяжкой 10 кОм к GND. Пробуждение из Deep Sleep соединением GPIO16 → RST не предусмотрено.
+4. **UART0 TX0/RX0 совместно с RS-485:** выход RO MAX3485 подключается к RX0 через съёмную перемычку.
+5. **Угловой разъём программирования 1×5** с контактами 5V, GND, TX0, RX0, RO; перемычка на соседних контактах **4–5**.
+6. Две кнопки без фиксации: **BOOT** (GPIO0 → GND) и **RESET** (RST → GND).
+7. **Два светодиода питания:** +5 В и +3,3 В. Светодиодов активности и GPIO, а также отдельной микросхемы логического буфера нет.
+8. **12 площадок для припайки на материнскую плату:** пять GPIO, ADC 0–1 В, 5V/GND/+3V3, RS485 A/B и дополнительный GND.
+9. Защита внешних входов, делитель ADC, подтяжки I²C, согласование и смещение RS-485, TVS размещаются на материнской плате.
 
-**Not yet validated:** UMW capacitor ESR/stability, thermal design, DIR boot glitches, RS-485 wiring/ground protection, mechanical/antenna keepout and firmware transport drivers.
+**Ещё не проверено:** соответствие выходного конденсатора требованиям AMS1117 UMW по ESR и устойчивости, тепловой режим, возможные импульсы GPIO16/DIR при включении, защита и заземление RS-485, геометрия платы и свободная зона антенны, а также реальные драйверы интерфейса в прошивке.
 
-**Full engineering specification:** [hardware/esp12f-debug-module/README.md](../hardware/esp12f-debug-module/README.md). Do not label this a manufactured, tested or released product.
+**Полное техническое описание:** [hardware/esp12f-debug-module/README.md](../hardware/esp12f-debug-module/README.md).
+
+До прохождения испытаний нельзя представлять этот модуль как изготовленную, проверенную или готовую к эксплуатации плату.
