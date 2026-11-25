@@ -1,12 +1,15 @@
-# Switch 2 — ESP-12F, 2-touch wall switch (no schematic yet)
+# AVTOSTAR Switch 2
 
-- ESP-12F / ESP8266.
-- Two external capacitive touch IC outputs to MCU GPIO.
-- Two optional indicator LEDs, subject to pin and current budget.
-- W: Wi-Fi + ESP-NOW, no RS-485 components fitted.
-- WR: **same PCB** plus MAX3485 UART0 half-duplex transceiver, protection and terminal connector.
-- Pin map **provisional**: GPIO4/5 touch inputs, GPIO12/13 indicators, GPIO14 DE; GPIO1/3 UART0 for WR.
-- Check ESP8266 boot straps (GPIO0/2/15) and UART flashing isolation before committing schematic.
-- Power and electrical safety need dedicated review for wall installation.
+Двухклавишный сенсорный выключатель на ESP-12F.
 
-See [MAX3485 interface notes](../../docs/rs485-hardware.md).
+## Функции
+
+- Два входа от внешних микросхем ёмкостных сенсоров.
+- Индикация состояния в соответствии с конструкцией устройства.
+- Прямое управление привязанными каналами Relay 2 через ESP-NOW.
+- Вариант W: беспроводной обмен.
+- Вариант WR: Wi-Fi, ESP-NOW и полудуплексный RS-485 на MAX3485.
+
+Для аппаратной и программной отладки применяется [ESP-12F Debug Module](../esp12f-debug-module/). Окончательное назначение выводов специализированной платы определяется при разработке её схемы. Питание и конструкция должны соответствовать условиям настенной установки.
+
+[Требования](../../docs/requirements.md) · [Варианты комплектации](../../docs/variants.md).

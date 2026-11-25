@@ -1,11 +1,16 @@
-# AVTOSTAR Control board — concept
+# AVTOSTAR Control
 
-Central controller remains provisionally ESP32-S3; this is **not** an endpoint ESP-12F board.
+Центральный контроллер локальной автоматизации.
 
-- Wired network: half-duplex RS-485 to endpoint WR nodes via suitable transceiver (MAX3485 or alternative).
-- Wireless: ordinary Wi-Fi/IP to local browser and ESP-NOW handling as design/testing permits.
-- Scenarios, Web UI/PWA, diagnostics, secure commissioning and OTA planned.
-- Optional RS-485 coordinator role; bus handover/failover must be deterministic and collision-free.
-- Endpoint switch-to-relay direct ESP-NOW behavior must not require the gateway.
+## Функции
 
-Power range, isolation, connectors and final microcontroller are not frozen.
+- Локальный веб-интерфейс и PWA.
+- Список устройств, управление каналами, состояния и диагностика.
+- Сценарии и расписания.
+- Связь с проводными устройствами через RS-485.
+- Интеграция с беспроводными узлами.
+- Авторизованная привязка устройств и проверяемые OTA-обновления.
+
+Для центрального контроллера рассматривается ESP32-S3. Управление доступом к общей шине должно исключать конфликт передачи нескольких узлов. Автономная связь Switch 2 и Relay 2 через ESP-NOW сохраняется независимо от Control.
+
+[Архитектура](../../docs/architecture.md) · [Безопасность](../../docs/security.md).

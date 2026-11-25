@@ -1,55 +1,46 @@
-# Roadmap — ESP-12F / MAX3485 direction
+# Дорожная карта AVTOSTAR Home
 
-## M0 — specifications and repo
+## 1. Аппаратная основа — ESP-12F Debug Module
 
-- [x] Establish product family (Switch 2, Relay 2, Control).
-- [x] Select ESP-12F for Switch 2 and Relay 2; MAX3485 for optional half-duplex RS-485.
-- [x] Define **W (wireless)** / **WR (wireless + RS-485)** PCB assembly options.
-- [x] Replace old CAN/TWAI scaffold with draft UART frame + host codec tests.
-- [x] Accept separate ESP-12F universal debug-module v1.0 hardware decisions (pin map, LDO, removable RO/RX0 jumper, BOOT/RESET); schematic and PCB added.
-- [ ] Validate that debug-module schematic/PCB meets its frozen specification (UMW capacitor stability, power, GPIO16 startup, RF, UART flashing).
-- [ ] Freeze endpoint-specific power requirements, GPIO assignments and programming isolation topology.
-- [ ] Approve low-voltage / mains product boundaries and component BOM.
+- [x] Определить состав и распиновку модуля.
+- [x] Разработать принципиальную схему и PCB 50 × 35 мм.
+- [x] Создать символы, посадочные места SMD/THT и 3D-модели в общей библиотеке KiCad.
+- [x] Проверить загрузку библиотеки штатным KiCad 10.
+- [x] Выполнить статический аудит схемы и PCB.
+- [x] Опубликовать KiCad, BOM, документацию, Gerber и Excellon; сверить координаты производственных файлов.
+- [ ] Выполнить штатные ERC/DRC платы, экспорт полной STEP-сборки и CAM-проверку.
+- [ ] Изготовить и собрать опытные модули.
+- [ ] Проверить питание, тепловой режим AMS1117, загрузку, UART, GPIO16, RS-485, I²C, HSPI, ADC и радиосвязь.
 
-## M1 — direct wireless pair
+[Проект модуля](../hardware/esp12f-debug-module/) · [Последний аудит](../hardware/esp12f-debug-module/audit/2026-11-25-filled.md).
 
-- [ ] ESP-12F Switch 2 W proof of concept, two external touch sensor inputs.
-- [ ] ESP-12F Relay 2 W proof of concept with low-voltage dummy loads.
-- [ ] Implement secure commissioning and direct ESP-NOW peer messaging.
-- [ ] Implement idempotent commands, state reports, retries and deduplication.
-- [ ] Test loss of router, gateway and Internet; measure latency and RF range.
+## 2. Базовая прошивка
 
-## M1a — universal debug-module hardware validation
+- [x] Создать конфигурации PlatformIO для W, WR и Control.
+- [x] Добавить кодек пакета UART/RS-485 и исходник теста.
+- [ ] Реализовать драйвер UART0/RS-485 и управление GPIO16.
+- [ ] Реализовать ESP-NOW, привязку устройств и хранение настроек.
+- [ ] Реализовать команды, подтверждения, состояния, повторы и подавление дубликатов.
+- [ ] Проверить обмен на двух отладочных модулях.
 
-- [x] Freeze the [universal ESP-12F debug-module specification](../hardware/esp12f-debug-module/README.md).
-- [x] Create and review ESP-12F + MAX3485 + AMS1117 KiCad schematic.
-- [x] Implement 12-contact solder-on footprint and vertical 1x5 UART/jumper assembly.
-- [x] Route PCB and publish KiCad project and BOM.
-- [ ] Run native KiCad ERC/DRC, export STEP and complete Gerber/Excellon manufacturing set.
-- [ ] Confirm UMW output-capacitor ESR, thermal budget, stable 3.3 V during Wi-Fi peaks.
-- [ ] Validate GPIO16/DIR at power-up, reset, brownout; ensure no unintended RS-485 driver enable.
-- [ ] Prototype BOOT/RESET and UART flashing with the RX0–RO jumper removed, then RS-485 with jumper installed.
-- [ ] Prove I²C, HSPI, ADC and antenna keepout; capture measurements and BOM.
+## 3. Switch 2 и Relay 2
 
-## M2 — wired WR prototype
+- [ ] Определить питание, сенсорные входы, выходные каскады и безопасные состояния.
+- [ ] Разработать отдельные принципиальные схемы и PCB устройств с комплектациями W/WR.
+- [ ] Реализовать управление двумя каналами и прямой обмен ESP-NOW.
+- [ ] Проверить проводной обмен между двумя узлами, затем многоточечную сеть.
+- [ ] Проверить автономную работу, потерю связи, перезапуски и помехоустойчивость.
 
-- [ ] Draw MAX3485 UART0 circuit with boot/flash isolation and safe DE state.
-- [ ] Draw one KiCad PCB for each endpoint with W/WR BOM variants.
-- [ ] Implement UART0 + DE shift-register-safe turn-around handling.
-- [ ] Prove 2-node controlled initiator/response RS-485.
-- [ ] Select multi-node bus ownership, gateway integration and failure policy.
-- [ ] Test termination, bias, surge, ESD, wiring errors and brownout.
+## 4. Control и локальное управление
 
-## M3 — central controller and web
+- [ ] Разработать центральный контроллер и механизм доступа к RS-485.
+- [ ] Реализовать локальный Web/PWA, список устройств, состояния и журналы.
+- [ ] Добавить сценарии, расписания, диагностику и сетевой мост без циклов.
+- [ ] Рассмотреть интеграцию MQTT / Home Assistant.
 
-- [ ] ESP32-S3 Control proof of concept with RS-485.
-- [ ] Local authenticated web UI / PWA for devices, channels, state and logs.
-- [ ] Rules, scenes, scheduler, secure network bridge and update management.
-- [ ] Optional MQTT / Home Assistant integration.
+## 5. Подготовка устройств к эксплуатации
 
-## M4 — product engineering
-
-- [ ] Verified electrical schematics, KiCad board/ERC/DRC, assembly and manufacturing tests.
-- [ ] Reliable recovery / update policies and security validation.
-- [ ] Appropriate EMC, electrical isolation, load and safety testing for each use case.
-- [ ] Final licensing, support strategy and commercialization requirements.
+- [ ] Проверить электрические и тепловые характеристики, отказоустойчивость и EMC.
+- [ ] Проверить авторизацию, OTA и восстановление.
+- [ ] Провести отдельные испытания безопасности для выбранных напряжений и нагрузок.
+- [ ] Определить условия лицензирования, обслуживания и выпуска.

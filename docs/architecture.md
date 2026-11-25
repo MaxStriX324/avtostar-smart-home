@@ -1,48 +1,40 @@
-# Architecture — selected ESP-12F + RS-485 direction
+# Архитектура AVTOSTAR Home
+
+## Топология
 
 ```mermaid
 flowchart TB
-  P["Phone or PC / browser"] <-->|"LAN Wi-Fi / local web"| C["AVTOSTAR Control
-ESP32-S3 (planned)"]
-  C <-->|"half-duplex RS-485 / MAX3485"| SW["Switch 2 WR
-ESP-12F"]
-  C <-->|"same RS-485 bus"| R["Relay 2 WR
-ESP-12F"]
-  SW <-.->|"direct ESP-NOW (independent of Control)"| R
+  P["Телефон / ПК"] <-->|"Wi-Fi / локальный Web"| C["AVTOSTAR Control"]
+  C <-->|"RS-485"| SW["Switch 2 WR"]
+  C <-->|"RS-485"| R["Relay 2 WR"]
+  SW <-->|"ESP-NOW"| R
 ```
 
-- Endpoints: ESP-12F (ESP8266), ESP-NOW on all versions; optional MAX3485 on WR assembly.
-- Central Control: ESP32-S3 provisional, browser/PWA and bridge via its own RS-485 transceiver.
-- The wired RS-485 segment is a **shared electrical bus**, not point-to-point connections to each endpoint.
-- Gateway loss must not break **already commissioned wireless ESP-NOW** switch-to-relay bindings.
-- Wired autonomous operation for a two-node pair can use a strict command/reply initiator/responder model; multi-node self-organizing RS-485 needs bus scheduling and recovery, **not yet implemented**.
-- Gateway must not create repeated commands or forwarding loops between Wi-Fi and RS-485.
+Конечные устройства Switch 2 и Relay 2 используют ESP-12F. Вариант W работает через Wi-Fi и ESP-NOW, вариант WR также подключается к общей шине RS-485. Для Control рассматривается ESP32-S3.
 
-## Transport behavior
+## Взаимодействие
 
-| Mode | Endpoint behavior | Current readiness |
-| --- | --- | --- |
-| W ↔ W | Direct ESP-NOW without router | Planned |
-| WR ↔ WR | RS-485 UART with mutually exclusive transmission | Planned, MAC scheduling TBD |
-| WR ↔ WR wireless | Direct ESP-NOW, even if RS-485 omitted/disconnected | Planned |
-| W/WR ↔ Control | Web control through gateway, state sync, scenes | Planned |
+| Режим | Принцип работы |
+|---|---|
+| W ↔ W | Прямой обмен ESP-NOW без маршрутизатора |
+| WR ↔ WR | Полудуплексный обмен по RS-485 с управлением доступом к шине |
+| WR ↔ WR (беспроводной) | Прямой обмен ESP-NOW независимо от проводного соединения |
+| W/WR ↔ Control | Управление, синхронизация состояния, сценарии |
 
-Do **not** claim automatic RS-485 failover, multi-master election or multihop Wi-Fi mesh as implemented. For initial WR trials, designate exactly one RS-485 bus initiator and schedule response windows; expand to a token or single-coordinator protocol only after tests.
+Устройства хранят привязки и настройки локально. Отказ Control не должен нарушать автономное беспроводное управление. Для RS-485 используется один активный инициатор или координатор обмена; одновременно передавать данные нескольким узлам нельзя. Шлюз должен исключать повторное выполнение команд и циклы пересылки.
 
-## Constraints
+ESP-NOW используется для прямого обмена между узлами; маршрутизация через промежуточные узлы требует отдельного протокола.
 
-- ESP-12F exposes a limited number of usable GPIOs. GPIO0/GPIO2/GPIO15 are bootstrapping-sensitive.
-- UART0 GPIO1/TX + GPIO3/RX is the natural MAX3485 port but also used for firmware flashing and boot logs. Provide isolation/programming circuitry and explicit DE defaults.
-- MAX3485: half-duplex differential transceiver, 3.3 V supply, UART carries *serial framed bytes*; no CAN frame/ID or TWAI controller.
-- For stable RS-485, bus topology, termination, idle biasing, reference conductor, surge and ground potential differences must be assessed.
-- ESP-NOW without a router is *peer-to-peer*, not an automatically routed mesh. Wi-Fi radio channel coexistence is a test item.
+## Аппаратная основа разработки
 
-## Software partitions
+[ESP-12F Debug Module v1.0](../hardware/esp12f-debug-module/) предоставляет питание 3,3 В от 5 В, пять универсальных GPIO, ADC и RS-485. GPIO16 управляет DE и /RE MAX3485. UART0 используется для обмена и прошивки; перемычка J1.4–J1.5 разъединяет RXD и RO при программировании.
 
-- Core: device ID, persistent binding, state, watchdog, authorization.
-- Transport: ESP-NOW and UART/RS-485; connection status and retries.
-- Protocol: version, source/destination, sequence, opcode, CRC over RS-485; a separate authenticated wireless envelope.
-- Roles: 2-button Switch 2, 2-output Relay 2, optional Control gateway.
-- Web/OTA: local authenticated control and verified updates; **not implemented**.
+## Программная архитектура
 
-See [RS-485 hardware notes](rs485-hardware.md) and [protocol](protocol.md).
+- Ядро: идентификатор, привязки, состояния, watchdog и авторизация.
+- Транспорт: ESP-NOW и UART/RS-485, контроль соединения и повторные передачи.
+- Протокол: версия, адреса, номер последовательности, команда, CRC; аутентифицированная оболочка для беспроводного обмена.
+- Роли: Switch 2, Relay 2, Control.
+- Управление: локальный Web/PWA, сценарии, диагностика и проверяемые OTA-обновления.
+
+[Аппаратная часть RS-485](rs485-hardware.md) · [Протокол](protocol.md) · [Дорожная карта](roadmap.md).

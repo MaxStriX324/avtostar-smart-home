@@ -1,79 +1,70 @@
-# AVTOSTAR Smart Home
+# AVTOSTAR Home
 
-**Local-first modular automation for stationary houses and camper vans**  
-**Powered by MaxStriX324**
+Модульная система локальной автоматизации для дома и автодома.
 
-> Status: engineering concept / firmware scaffold (November 2026). The ESP-12F debug module KiCad design is available; endpoint firmware and product qualification remain in development.
+**AVTOSTAR — Powered by MaxStriX324**
 
-## Универсальный отладочный модуль ESP-12F
+## Устройства
 
-Отдельная дочерняя плата для пайки на материнскую плату: ESP-12F, MAX3485, AMS1117-3.3, пять универсальных GPIO, ADC, кнопки BOOT и RESET, перемычка RO↔RX0 для прошивки по UART0. Модуль предназначен для разработки и отладки решений AVTOSTAR.
+| Устройство | Назначение | Интерфейсы |
+|---|---|---|
+| [ESP-12F Debug Module](hardware/esp12f-debug-module/) | Универсальная отладочная плата на ESP8266 | Wi-Fi, ESP-NOW, RS-485, 5 GPIO, ADC |
+| [Switch 2](hardware/switch-2/) | Двухклавишный сенсорный выключатель | Wi-Fi, ESP-NOW, RS-485 (WR) |
+| [Relay 2](hardware/relay-2/) | Двухканальный модуль управления нагрузками | Wi-Fi, ESP-NOW, RS-485 (WR) |
+| [Control](hardware/control/) | Центральный контроллер, локальный веб-интерфейс, сценарии и диагностика | Wi-Fi, RS-485 |
 
-- [Техническое описание модуля](hardware/esp12f-debug-module/README.md)
-- [Исходный проект KiCad](hardware/esp12f-debug-module/kicad/)
-- [Конфигурация модуля](docs/esp12f-debug-module-decisions.md)
+## Архитектура
 
-## Objective
+Switch 2 и Relay 2 обмениваются командами напрямую через ESP-NOW. Для проводной сети используется полудуплексная шина RS-485. Центральный контроллер обеспечивает управление устройствами, сценариями и состояниями через локальный веб-интерфейс.
 
-Two types of autonomous endpoints — a two-touch-button wall switch and a two-output relay module — can operate directly over Wi-Fi/ESP-NOW without an internet connection, router or central controller. A future central gateway adds browser/PWA control, scenarios, scheduling, diagnostics and wired RS-485 device management.
+Настройки, привязки устройств и безопасные состояния выходов хранятся локально. Базовое беспроводное управление не зависит от интернета, маршрутизатора или центрального контроллера.
 
-## Devices
+Для Switch 2 и Relay 2 предусмотрены два варианта комплектации собственной печатной платы:
 
-| Product | Processor | Functions | Communications |
-| --- | --- | --- | --- |
-| **Switch 2** | **ESP-12F / ESP8266** | Two external capacitive touch inputs, optional indicators | Wi-Fi / ESP-NOW, optional RS-485 |
-| **Relay 2** | **ESP-12F / ESP8266** | Two independently controlled outputs | Wi-Fi / ESP-NOW, optional RS-485 |
-| **Control** | ESP32-S3 (tentative) | Local web dashboard, automation, network bridging | Wi-Fi + RS-485 planned |
+| Вариант | Wi-Fi / ESP-NOW | RS-485 |
+|---|---|---|
+| W | Да | — |
+| WR | Да | MAX3485 |
 
-**MAX3485 is an RS-485 transceiver, not a CAN controller or CAN transceiver. CAN and MCP2515 have been removed from the selected endpoint baseline.**
+## ESP-12F Debug Module v1.0
 
-## One PCB per endpoint, two assembly variants
+Универсальный модуль для разработки и отладки аппаратуры и прошивок AVTOSTAR.
 
-- **W — Wireless:** ESP-12F + Wi-Fi / ESP-NOW; the MAX3485 and its wired interface components are not populated.
-- **WR — Wireless + RS-485:** **the same Switch 2 or Relay 2 PCB** with MAX3485, wired connector and required protection components fitted. Wireless functions remain present.
+| Характеристика | Значение |
+|---|---|
+| Микроконтроллер | ESP-12F / ESP8266 |
+| Приёмопередатчик | MAX3485 |
+| Питание | +5 В, AMS1117-3.3 |
+| Цифровые выводы | GPIO4, GPIO5, GPIO12, GPIO13, GPIO14 |
+| ADC | 0–1 В |
+| Сервисный UART | 3,3 В; RESET, FLASH, перемычка RXD–RO |
+| Размер PCB | 50 × 35 мм |
+| Конструкция | 2 слоя, 1,6 мм, 12 контактов, отверстия Ø0,8 мм |
+| Монтаж на материнскую плату | SMD или выводной |
 
-Switch 2 and Relay 2 are **different PCB designs**, each with a common W/WR layout and population options. A mains-power relay and an automotive low-voltage relay may also need different power/output hardware, to be evaluated separately. The central Control is its own board.
+[Описание и распиновка](hardware/esp12f-debug-module/README.md) · [Проект KiCad](hardware/esp12f-debug-module/kicad/) · [BOM](hardware/esp12f-debug-module/BOM.csv) · [Gerber и Excellon](hardware/esp12f-debug-module/manufacturing/AVTOSTAR_ESP12F_50x35_Gerber.zip)
 
-## Core design principles
+[Общая библиотека KiCad: символы, футпринты и 3D-модели](https://github.com/MaxStriX324/kicad-component-library).
 
-1. Store paired-device binding and safe configuration locally, at the endpoints; Control is optional for basic wireless use.
-2. Use direct **ESP-NOW** for the first switch-to-relay prototype. ESP-NOW alone does **not** deliver automatic multihop mesh routing.
-3. For WR, use **3.3 V MAX3485 + ESP8266 UART0** on a **half-duplex RS-485 multidrop bus**, with explicit driver-enable management.
-4. RS-485 has **no CAN-style collision arbitration**. Design a bus access/scheduling protocol before multi-node deployment; never let multiple independent masters transmit indiscriminately.
-5. Use an application-level command and state protocol common to wireless and wired transports, with acknowledgements, deduplication and safe relay boot behavior.
-6. Provide phone access initially through the gateway's authenticated local web interface, not by assuming a phone can speak ESP-NOW directly.
-7. Protect supplies and outputs for the target environment. Do not assume 12/24 V vehicle and 230 V AC building variants are electrically interchangeable.
+## Документация
 
-## Repository map
+| Раздел | Содержание |
+|---|---|
+| [Аппаратная часть](hardware/) | Платы, проекты и компоненты |
+| [Архитектура](docs/architecture.md) | Топология сети, роли устройств и взаимодействие |
+| [Требования](docs/requirements.md) | Функции устройств и интерфейсов |
+| [Варианты комплектации](docs/variants.md) | W и WR |
+| [RS-485](docs/rs485-hardware.md) | Подключение, управление передачей и топология шины |
+| [Протокол](docs/protocol.md) | Формат пакета UART/RS-485 и логика обмена |
+| [Безопасность](docs/security.md) | Авторизация, привязка и обновление устройств |
+| [Прошивки](firmware/) | PlatformIO, сборка и тест кодека |
+| [Дорожная карта](docs/roadmap.md) | Этапы разработки |
+| [План испытаний](docs/validation-plan.md) | Электрические и функциональные проверки |
 
-- [hardware/esp12f-debug-module/README.md](hardware/esp12f-debug-module/README.md) — описание универсального отладочного модуля
-- [docs/esp12f-debug-module-decisions.md](docs/esp12f-debug-module-decisions.md) — принятые аппаратные решения
-- [docs/architecture.md](docs/architecture.md) — topology, failover boundaries and gateway
-- [docs/requirements.md](docs/requirements.md) — current endpoint requirements
-- [docs/variants.md](docs/variants.md) — W / WR assembly variants
-- [docs/rs485-hardware.md](docs/rs485-hardware.md) — MAX3485, UART and wiring constraints
-- [docs/protocol.md](docs/protocol.md) — draft transport-neutral message framing
-- [docs/security.md](docs/security.md) — commissioning and security
-- [docs/validation-plan.md](docs/validation-plan.md) — safety and communication test gates
-- [docs/roadmap.md](docs/roadmap.md) — phased build plan
-- [hardware/](hardware/) — hardware projects and planning
-- [firmware/](firmware/) — PlatformIO build scaffolds and wire-codec test
+## Состояние разработки
 
-## Build scaffolds (not operational firmware)
+На 25.11.2026 опубликованы исходники KiCad, BOM и производственный комплект ESP-12F Debug Module v1.0. Статический аудит проекта и проверка соответствия Gerber и сверловки выполнены. Изготовление, испытания образца и штатный ERC/DRC платы учитываются отдельно в дорожной карте.
 
-```sh
-cd firmware
-pio run -e switch2_w
-pio run -e switch2_wr
-pio run -e relay2_w
-pio run -e relay2_wr
-pio run -e control
-```
+Для Switch 2, Relay 2 и Control определены архитектура и требования. В репозитории прошивок доступны конфигурации PlatformIO и кодек тестового пакета; функциональные драйверы и сетевое управление относятся к следующим этапам.
 
-The firmware is a **nonfunctional scaffold**: neither relay drivers nor real RS-485, ESP-NOW, touch input, gateway web UI or OTA are implemented. Product pinouts remain provisional.
-
-A native C++ wire-codec test can be compiled separately; see [firmware/README.md](firmware/README.md).
-
-**Safety:** do not connect these prototypes to 230 V AC, safety-critical vehicle systems or unprotected high-energy supplies.
-
-**AVTOSTAR Smart Home — Powered by MaxStriX324.**
+**AVTOSTAR Home — Powered by MaxStriX324.**

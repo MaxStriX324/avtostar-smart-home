@@ -1,10 +1,11 @@
-# Hardware
+# Аппаратная часть AVTOSTAR Home
 
-- [`esp12f-debug-module/`](esp12f-debug-module/): ESP-12F debug module v1.0, KiCad schematic, PCB and BOM.
-- `switch-2/`: ESP-12F, two externally sensed capacitive touch buttons. W or WR assembly.
-- `relay-2/`: ESP-12F, two output drivers. W or WR assembly.
-- `control/`: provisional ESP32-S3 gateway, wired RS-485 and wireless LAN.
-- `common/`: power, MAX3485 and programming/EMC notes.
+| Плата | Назначение | Материалы |
+|---|---|---|
+| [ESP-12F Debug Module v1.0](esp12f-debug-module/) | Универсальный модуль 50 × 35 мм | [KiCad](esp12f-debug-module/kicad/), [BOM](esp12f-debug-module/BOM.csv), [Gerber и сверловка](esp12f-debug-module/manufacturing/) |
+| [Switch 2](switch-2/) | Двухклавишный сенсорный выключатель | Описание требований |
+| [Relay 2](relay-2/) | Двухканальный модуль управления нагрузками | Описание требований |
+| [Control](control/) | Центральный контроллер | Описание архитектуры |
+| [Общие аппаратные узлы](common/) | Питание, ESP-12F, UART и RS-485 | Правила проектирования |
 
-**One PCB layout per endpoint product, two population variants (W/WR).** MAX3485, its connector and protection are fitted on WR. ESP-NOW remains available on both variants.
-
+Символы, посадочные места и 3D-модели хранятся в [общей библиотеке MaxStriX324](https://github.com/MaxStriX324/kicad-component-library). Установка и обновление библиотеки выполняются её штатными скриптами.
