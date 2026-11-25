@@ -1,42 +1,43 @@
-# Application protocol — RS-485/UART + ESP-NOW, draft v0.2
+# Протокол обмена AVTOSTAR
 
-> **Not yet implemented on hardware.** The packet format below is a first deterministic test envelope, not a finalized secure network protocol.
+Версия описания 0.2. Формат тестового пакета UART/RS-485 реализован в кодеке. Сетевой транспорт и аутентификация относятся к дальнейшей разработке.
 
-## Fixed-length initial UART/RS-485 frame (16 bytes)
+## Пакет UART/RS-485 — 16 байт
 
-A small explicit frame avoids directly serializing an ABI-dependent C++ structure.
+| Смещение | Размер, байт | Поле |
+|---|---:|---|
+| 0–1 | 2 | Маркер начала `A5 5A` |
+| 2 | 1 | Версия (1) |
+| 3 | 1 | Команда: SET=1, STATE=2, ACK=3, HEARTBEAT=4, ERROR=5 |
+| 4–5 | 2 | Идентификатор отправителя, little-endian |
+| 6–7 | 2 | Идентификатор получателя, little-endian |
+| 8–9 | 2 | Номер последовательности, little-endian |
+| 10 | 1 | Канал: 0 — системный, 1/2 — каналы устройства |
+| 11 | 1 | Флаги |
+| 12–13 | 2 | Значение, little-endian |
+| 14–15 | 2 | CRC-16/Modbus, little-endian, по байтам 0–13 |
 
-| Offset | Size | Field |
-| --- | --- | --- |
-| 0..1 | 2 | Start marker `A5 5A` |
-| 2 | 1 | Version (1) |
-| 3 | 1 | Opcode (SET=1, STATE=2, ACK=3, HEARTBEAT=4, ERROR=5) |
-| 4..5 | 2 | Source node ID, little-endian |
-| 6..7 | 2 | Destination node ID, little-endian |
-| 8..9 | 2 | Sequence number, little-endian |
-| 10 | 1 | Channel (0=system, 1/2=endpoints) |
-| 11 | 1 | Flags, reserved/role-specific |
-| 12..13 | 2 | Value, little-endian |
-| 14..15 | 2 | CRC-16/Modbus (poly 0xA001, init 0xFFFF), little-endian, over bytes 0..13 |
+CRC: полином 0xA001, начальное значение 0xFFFF. Поля кодируются явно, без прямой сериализации структуры C++.
 
-Nodes 1..1023 are reserved for addressing; 0 may be used for **strictly limited** broadcast discovery. Validate frame length, version, opcode, address and CRC before routing it. A CRC detects accidental corruption; it does **not** authenticate commands.
+Адреса узлов — 1–1023; адрес 0 предназначен для ограниченного широковещательного обнаружения. При получении проверяются длина, версия, команда, адрес и CRC. CRC обнаруживает ошибки передачи, но не подтверждает подлинность команды.
 
-ESP-NOW transport should encode the same logical fields but add a separately designed authenticated wireless envelope and replay protection. Do **not** assume this 16-byte UART frame is secure just because it has a CRC.
+## Логика обмена
 
-## Behaviors to implement
+- Команды SET(ON/OFF) вместо повторных переключений TOGGLE.
+- Раздельные события доставки, подтверждения ACK и актуального состояния STATE.
+- Подавление дубликатов по отправителю, идентификатору сеанса и номеру последовательности; обработка переполнения счётчика и перезапуска.
+- Команды принимаются от авторизованных и привязанных устройств.
+- При пересылке через Control сохраняется идентификатор сообщения и исключаются циклы.
+- Для Relay 2 определяется состояние при отключении связи, восстановлении соединения, снижении напряжения, watchdog и включении питания.
 
-- Prefer **SET(ON/OFF)** commands (idempotent) to repeated toggle commands.
-- Link-layer delivery, application ACK and authoritative STATE are distinct events.
-- Deduplicate by (sender, boot/session ID, sequence) and handle sequence wrapping and restarts.
-- Only allow commands from commissioned and authorized devices.
-- If the gateway bridges channels, preserve logical message identity and prevent loops.
-- Define relay behavior on offline, reconnect, undervoltage, watchdog and power-up.
-- Do **not** transmit concurrently onto a shared RS-485 pair. A bus scheduler/ownership model is required.
+## Доступ к RS-485
 
-## Initial bus access plan (unproven)
+Первый этап — два узла, один инициатор. Switch 2 передаёт запрос, освобождает линию, Relay 2 отвечает после заданного интервала.
 
-1. Two nodes, one initiator: switch sends request, relinquishes DE, relay replies after specified turn-around gap.
-2. Multiple nodes: pick **one active coordinator** with grant/response windows; gateway takeover/election requires additional design and failure testing.
-3. Without coordinator, direct ESP-NOW can still drive a commissioned switch-relay pair. Purely wired multi-master autonomy remains a future requirement, not a verified feature.
+Для многоточечной сети предусматривается один активный координатор с окнами передачи и ответа. Механизм смены координатора и автономная проводная работа нескольких инициаторов требуют отдельной реализации и испытаний.
 
-Protocol test code: `firmware/include/protocol.hpp` and `firmware/test/test_protocol.cpp`.
+## ESP-NOW
+
+Логические поля сообщения общие с проводным транспортом. Для беспроводного обмена предусматривается аутентифицированная оболочка, управление ключами и защита от повторного воспроизведения. Прямой обмен привязанных Switch 2 и Relay 2 не зависит от Control.
+
+[Кодек](../firmware/include/protocol.hpp) · [Тест кодека](../firmware/test/test_protocol.cpp) · [Безопасность](security.md).

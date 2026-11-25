@@ -1,8 +1,8 @@
-# Firmware scaffold — ESP-12F and MAX3485 RS-485
+# Прошивки AVTOSTAR Home
 
-PlatformIO environments reflect the selected endpoint hardware. **None of these builds currently controls real hardware**: there are no touch sensing, relay drivers, ESP-NOW, RS-485 UART driver, web interface, OTA or commissioning implementations.
+Среда разработки — PlatformIO, Arduino Framework. В репозитории находятся конфигурации сборки и кодек пакета UART/RS-485. Функциональные драйверы GPIO, ESP-NOW, RS-485, Web, OTA и привязки устройств разрабатываются по [дорожной карте](../docs/roadmap.md).
 
-## Build targets
+## Конфигурации сборки
 
 ```sh
 cd firmware
@@ -13,18 +13,31 @@ pio run -e relay2_wr
 pio run -e control
 ```
 
-- `switch2_w`, `switch2_wr`, `relay2_w`, `relay2_wr`: `espressif8266`, `esp12e` PlatformIO reference module target. Actual ESP-12F module flash size/board settings must be confirmed against purchased part.
-- `control`: `espressif32`, provisional ESP32-S3 development board.
-- `AVTOSTAR_RS485_ENABLED` is currently an **assembly compile-time label only**, **not a functioning bus driver**.
-- The scaffold writes diagnostic UART0 logs only. On WR production hardware UART0 is reserved for MAX3485, so debug logging, programming isolation and boot chatter must be designed appropriately.
+| Окружение | Платформа | Плата PlatformIO |
+|---|---|---|
+| switch2_w, switch2_wr | espressif8266 | esp12e |
+| relay2_w, relay2_wr | espressif8266 | esp12e |
+| control | espressif32 | esp32-s3-devkitc-1 |
 
-## Native codec test
+Конфигурация ESP-12F использует целевую плату esp12e; параметры Flash определяются конкретным модулем. Флаг AVTOSTAR_RS485_ENABLED обозначает вариант комплектации, а не наличие реализованного драйвера шины.
+
+Текущая программа выводит диагностические сообщения через UART0. При разработке WR-прошивки необходимо отделить диагностический вывод от кадров RS-485.
+
+## Отладочный модуль ESP-12F
+
+[Схема, распиновка и программирование](../hardware/esp12f-debug-module/README.md).
+
+GPIO1 — TXD, GPIO3 — RXD, GPIO16 — направление MAX3485. LOW — приём, HIGH — передача. Перед подключением программатора снять перемычку J1.4–J1.5; уровни UART — 3,3 В. После прошивки отключить программатор, вернуть перемычку и выполнить RESET.
+
+## Тест кодека на ПК
+
+Из корня репозитория:
 
 ```sh
 g++ -std=c++17 -Wall -Wextra -pedantic -I firmware/include firmware/test/test_protocol.cpp -o /tmp/avtostar-protocol-test
 /tmp/avtostar-protocol-test
 ```
 
-Run these commands from the **repository root**. This test checks only encoding and decoding of the version-1 16-byte RS-485 frame and CRC; it does **not** validate UART timing, DE direction control, bus arbitration, or hardware safety.
+Тест проверяет кодирование и декодирование пакета версии 1 (16 байт) и CRC. Проверки UART, времени переключения направления, доступа к шине и поведения устройства выполняются на стенде.
 
-The old ESP32-C3 CAN/TWAI/WC environments are discontinued.
+[Описание протокола](../docs/protocol.md) · [План испытаний](../docs/validation-plan.md).
