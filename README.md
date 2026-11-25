@@ -3,14 +3,15 @@
 **Local-first modular automation for stationary houses and camper vans**  
 **Powered by MaxStriX324**
 
-> Status: engineering concept / firmware scaffold (November 2026). No KiCad schematic, tested PCB, operational firmware, or certified product is released yet.
+> Status: engineering concept / firmware scaffold (November 2026). The ESP-12F debug module KiCad design is available; endpoint firmware and product qualification remain in development.
 
 ## Универсальный отладочный модуль ESP-12F
 
-Отдельная дочерняя плата для пайки на материнскую плату: ESP-12F, MAX3485, AMS1117-3.3, пять универсальных GPIO, ADC, кнопки BOOT и RESET, перемычка RO↔RX0 для прошивки по UART0. Модуль предназначен для разработки и отладки решений AVTOSTAR и не заменяет платы Switch 2 и Relay 2.
+Отдельная дочерняя плата для пайки на материнскую плату: ESP-12F, MAX3485, AMS1117-3.3, пять универсальных GPIO, ADC, кнопки BOOT и RESET, перемычка RO↔RX0 для прошивки по UART0. Модуль предназначен для разработки и отладки решений AVTOSTAR.
 
 - [Техническое описание модуля](hardware/esp12f-debug-module/README.md)
-- [Принятые аппаратные решения](docs/esp12f-debug-module-decisions.md)
+- [Исходный проект KiCad](hardware/esp12f-debug-module/kicad/)
+- [Конфигурация модуля](docs/esp12f-debug-module-decisions.md)
 
 ## Objective
 
@@ -55,7 +56,7 @@ Switch 2 and Relay 2 are **different PCB designs**, each with a common W/WR layo
 - [docs/security.md](docs/security.md) — commissioning and security
 - [docs/validation-plan.md](docs/validation-plan.md) — safety and communication test gates
 - [docs/roadmap.md](docs/roadmap.md) — phased build plan
-- [hardware/](hardware/) — hardware planning, no verified KiCad design
+- [hardware/](hardware/) — hardware projects and planning
 - [firmware/](firmware/) — PlatformIO build scaffolds and wire-codec test
 
 ## Build scaffolds (not operational firmware)

@@ -9,7 +9,7 @@
 | VCC | regulated 3.3 V | Power, local bypass required |
 | GND | common signal reference | Evaluate isolation where grounds differ |
 | DI | ESP8266 UART0 TX (GPIO1) | Transmitter data |
-| RO | ESP8266 UART0 RX (GPIO3), through removable J2.4–J2.5 shunt on debug module | Receiver data; shunt removed for flashing |
+| RO | ESP8266 UART0 RX (GPIO3), through 100 Ω and removable J1.4–J1.5 shunt on debug module | Receiver data; shunt removed for flashing |
 | DE | **ESP GPIO16 on accepted universal debug module** | Active-high transmitter enable |
 | /RE | tied to DE in simple half-duplex direction circuit | Receive enabled when DE=0; review hardware behavior |
 | A / B | RS-485 bus pair | Differential pair, labels/polarity must be verified at connector level |
@@ -18,20 +18,22 @@
 
 **UART programming conflict:** ESP8266 ROM bootloader uses GPIO1/GPIO3. A populated MAX3485 receiver can actively drive RO onto GPIO3 while a USB-UART adapter also drives the programming RX input. Design positive separation: programming jumper, receiver-enable control plus isolation, or a verified switching circuit; do not just wire two push-pull outputs together. UART0 debug prints are also incompatible with unrestricted RS-485 transmission.
 
-## Accepted debug-module GPIO map (2026-11-16)
+## Debug-module GPIO map (v1.0)
 
 **Reference:** [Universal ESP-12F debug module v1.0](../hardware/esp12f-debug-module/README.md).
 
 | ESP GPIO | Fixed debug-module function |
 | --- | --- |
-| GPIO1 TX0 | MAX3485 DI and service UART TX |
-| GPIO3 RX0 | Service UART RX, or MAX3485 RO via removable J2.4–J2.5 jumper |
+| GPIO1 TX0 | MAX3485 DI via 100 Ω and service UART TX |
+| GPIO3 RX0 | Service UART RX, or MAX3485 RO via removable J1.4–J1.5 jumper |
 | GPIO16 | MAX3485 DE + /RE direction; 10 kΩ pull-down |
 | GPIO4, GPIO5, GPIO12, GPIO13, GPIO14 | Five general-purpose motherboard signals, no fixed LEDs or loads |
-| GPIO0/2/15 | Boot straps only; BOOT button to GPIO0 |
+| GPIO0/2/15 | Boot straps only; FLASH button to GPIO0 |
 | ADC | Direct 0–1 V to carrier; scaling/protection external |
 
 This accepted map applies to the **new debug daughterboard**. Legacy endpoint pin suggestions that used **GPIO14 for DE** are superseded *for this module*. Dedicated Switch 2 / Relay 2 W/WR product PCB pin maps remain provisional until designed and tested. With GPIO16 consumed by DIR, RTC Deep Sleep timed wake via GPIO16→RST is unavailable.
+
+The debug module has an SM712 TVS and 10 Ω series resistors on A/B, plus 100 Ω series resistors on DI and RO. J1.1 is the +3.3 V rail.
 
 ## RS-485 cable and topology
 
