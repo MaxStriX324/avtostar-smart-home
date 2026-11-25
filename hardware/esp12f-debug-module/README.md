@@ -91,6 +91,7 @@ D1 SM712 (SOT-23): вывод 1 — RS485_B, вывод 2 — RS485_A, выво�
 - [Принципиальная схема](kicad/AVTOSTAR_ESP12F_Debug_Module.kicad_sch)
 - [Печатная плата](kicad/AVTOSTAR_ESP12F_Debug_Module.kicad_pcb)
 - [Спецификация компонентов](BOM.csv)
+- [Gerber и сверловка 50 × 35 мм](manufacturing/AVTOSTAR_ESP12F_50x35_Gerber.zip)
 
 Библиотека [MaxStriX324 KiCad Component Library](https://github.com/MaxStriX324/kicad-component-library) содержит посадочные места и символы AVTOSTAR:
 
